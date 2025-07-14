@@ -66,7 +66,7 @@
         <div class="container">
           <div class="content-layout">
             <!-- Scripts Grid -->
-            <div :class="['scripts-section', { 'with-detail': selectedScript }]">
+            <div class="scripts-section">
               <div class="scripts-grid">
                 <div
                   v-for="script in paginatedScripts"
@@ -175,108 +175,13 @@
               </div>
             </div>
 
-            <!-- Detail Panel -->
-            <div v-if="selectedScript" class="detail-panel">
-              <div class="detail-card">
-                <div class="detail-content">
-                  <!-- Cover and Title -->
-                  <div class="detail-header">
-                    <img
-                      :src="selectedScript.cover || '/placeholder.svg'"
-                      :alt="selectedScript.title"
-                      class="detail-cover"
-                    />
-                    <h2 class="detail-title">{{ selectedScript.title }}</h2>
-                    <p class="detail-author">作者：{{ selectedScript.author }}</p>
-                    <div class="detail-tags">
-                      <span
-                        v-for="tag in selectedScript.tags"
-                        :key="tag"
-                        class="detail-tag"
-                      >
-                        {{ tag }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Description -->
-                  <div class="detail-section">
-                    <h3 class="section-title">故事简介</h3>
-                    <p class="section-content">{{ selectedScript.description }}</p>
-                  </div>
-
-                  <!-- Characters -->
-                  <div class="detail-section">
-                    <h3 class="section-title">角色列表</h3>
-                    <div class="characters-list">
-                      <div
-                        v-for="(character, index) in selectedScript.characters"
-                        :key="index"
-                        class="character-item"
-                      >
-                        <div class="character-avatar">
-                          <span>{{ character.name[0] }}</span>
-                        </div>
-                        <div class="character-info">
-                          <p class="character-name">{{ character.name }}</p>
-                          <p class="character-desc">{{ character.description }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Stats -->
-                  <div class="detail-section">
-                    <div class="detail-stats">
-                      <div class="detail-stat">
-                        <span class="stat-label">
-                          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                          </svg>
-                          人数
-                        </span>
-                        <span class="stat-value">{{ selectedScript.players }}</span>
-                      </div>
-                      <div class="detail-stat">
-                        <span class="stat-label">难度</span>
-                        <div class="difficulty-stars">
-                          <svg
-                            v-for="i in 5"
-                            :key="i"
-                            :class="['star', { filled: i <= selectedScript.difficulty }]"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"></polygon>
-                          </svg>
-                        </div>
-                      </div>
-                      <div class="detail-stat">
-                        <span class="stat-label">
-                          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12,6 12,12 16,14"></polyline>
-                          </svg>
-                          时长
-                        </span>
-                        <span class="stat-value">{{ selectedScript.duration }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Start Game Button -->
-                  <button @click="startGame" class="start-game-button">
-                    <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <polygon points="5,3 19,12 5,21"></polygon>
-                    </svg>
-                    开始游戏
-                  </button>
-                </div>
-              </div>
-            </div>
+            <!-- Script Dossier -->
+            <ScriptDossier
+              :script="selectedScript"
+              :visible="!!selectedScript"
+              @close="selectedScript = null"
+              @startGame="startGame"
+            />
           </div>
         </div>
       </div>
@@ -287,6 +192,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import ScriptDossier from './ScriptDossier.vue'
 
 // 接口定义
 interface Script {
@@ -701,17 +607,11 @@ const startGame = () => {
 }
 
 .content-layout {
-  display: flex;
-  gap: 32px;
+  display: block;
 }
 
 .scripts-section {
-  transition: all 0.5s ease;
   width: 100%;
-}
-
-.scripts-section.with-detail {
-  width: 66.666667%;
 }
 
 .scripts-grid {
@@ -921,204 +821,10 @@ const startGame = () => {
   border-color: transparent;
 }
 
-/* Detail Panel */
-.detail-panel {
-  width: 33.333333%;
-  transition: all 0.5s ease;
-}
 
-.detail-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-  position: sticky;
-  top: 24px;
-}
-
-.detail-content {
-  padding: 24px;
-}
-
-.detail-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.detail-cover {
-  width: 144px;
-  height: 208px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin: 0 auto 16px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-.detail-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f1f5f9;
-  margin: 0 0 8px 0;
-}
-
-.detail-author {
-  font-size: 14px;
-  color: #94a3b8;
-  margin: 0 0 12px 0;
-}
-
-.detail-tags {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.detail-tag {
-  padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.detail-section {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #f1f5f9;
-  margin: 0 0 12px 0;
-}
-
-.section-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #cbd5e1;
-  margin: 0;
-}
-
-.characters-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.character-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 8px;
-  backdrop-filter: blur(4px);
-}
-
-.character-avatar {
-  width: 44px;
-  height: 44px;
-  background: #6366f1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.character-info {
-  flex: 1;
-}
-
-.character-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #f1f5f9;
-  margin: 0 0 4px 0;
-}
-
-.character-desc {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
-}
-
-.detail-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detail-stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.stat-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stat-value {
-  color: #cbd5e1;
-  font-weight: 500;
-}
-
-.start-game-button {
-  width: 100%;
-  padding: 12px 24px;
-  background: linear-gradient(to right, #10b981, #14b8a6);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-.start-game-button:hover {
-  background: linear-gradient(to right, #059669, #0d9488);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-  transform: scale(1.02);
-}
-
-.button-icon {
-  width: 20px;
-  height: 20px;
-}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .content-layout {
-    flex-direction: column;
-  }
-
-  .scripts-section,
-  .scripts-section.with-detail {
-    width: 100%;
-  }
-
-  .detail-panel {
-    width: 100%;
-  }
-
   .scripts-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
