@@ -1,11 +1,11 @@
 <template>
   <div id="app">
-    <GalgameInterface />
+    <router-view />
   </div>
 </template>
 
 <script setup lang="ts">
-import GalgameInterface from '@/components/GalgameInterface.vue'
+// 路由视图组件会自动处理组件渲染
 </script>
 
 <style>

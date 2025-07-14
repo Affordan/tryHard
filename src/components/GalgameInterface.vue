@@ -43,6 +43,7 @@
       <!-- Control Panel -->
       <ControlPanel
         :auto-advance="autoAdvanceEnabled"
+        @go-home="goToHome"
         @restart="restartScript"
         @toggle-auto="toggleAutoAdvance"
         @show-history="showScriptHistory"
@@ -231,6 +232,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import BackgroundSystem from './BackgroundSystem.vue'
 import CharacterPanel from './CharacterPanel.vue'
 import DialogueSystem from './DialogueSystem.vue'
@@ -653,6 +655,27 @@ const handleKeydown = (event: KeyboardEvent) => {
       event.preventDefault()
     }
   }
+}
+
+// 路由相关
+const route = useRoute()
+const router = useRouter()
+
+// 获取路由参数中的剧本ID
+const scriptId = computed(() => route.params.scriptId as string)
+
+// 监听剧本ID变化，可以在这里根据不同的剧本加载不同的数据
+watch(scriptId, (newScriptId) => {
+  if (newScriptId) {
+    console.log('选中的剧本ID:', newScriptId)
+    // 这里可以根据剧本ID加载对应的剧本数据
+    // 目前使用默认数据，后续可以扩展
+  }
+}, { immediate: true })
+
+// 返回主页的方法
+const goToHome = () => {
+  router.push('/')
 }
 
 // 初始化

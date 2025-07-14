@@ -1,12 +1,15 @@
 <template>
   <div class="control-panel">
+    <button @click="$emit('goHome')" class="control-button" title="返回主页">
+      🏠
+    </button>
     <button @click="$emit('restart')" class="control-button" title="重新开始">
       🔄
     </button>
-    <button 
-      @click="$emit('toggleAuto')" 
-      class="control-button" 
-      :class="{ 'auto-active': autoAdvance }" 
+    <button
+      @click="$emit('toggleAuto')"
+      class="control-button"
+      :class="{ 'auto-active': autoAdvance }"
       title="自动推进"
     >
       {{ autoAdvance ? '⏸' : '▶' }}
@@ -25,7 +28,7 @@ defineProps({
   autoAdvance: Boolean
 })
 
-defineEmits(['restart', 'toggleAuto', 'showHistory', 'showSettings'])
+defineEmits(['goHome', 'restart', 'toggleAuto', 'showHistory', 'showSettings'])
 </script>
 
 <style scoped>
