@@ -213,6 +213,8 @@ const getRestText = (text: string) => {
 <style scoped>
 /* 导入字体 */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap');
 
 /* 遮罩层 */
 .dossier-overlay {
@@ -330,20 +332,32 @@ const getRestText = (text: string) => {
   height: 100%;
   position: relative;
   background:
-    radial-gradient(circle at 20% 80%, rgba(245, 230, 211, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(222, 184, 135, 0.1) 0%, transparent 50%),
+    /* 使用指定的背景图片 */
+    url('/background.png') center/cover no-repeat,
+    /* 备用渐变背景，防止图片加载失败 */
     linear-gradient(135deg, #F5E6D3 0%, #E8D5B7 100%);
+  background-size: cover;
+  background-position: center;
+  background-attachment: local;
   box-shadow: inset 0 0 50px rgba(139, 69, 19, 0.1);
 }
 
 .left-page {
   border-radius: 12px 0 0 12px;
   border-right: 1px solid rgba(139, 69, 19, 0.2);
+  box-shadow:
+    inset -8px 0 16px rgba(139, 69, 19, 0.12),
+    inset -4px 0 8px rgba(101, 67, 33, 0.08),
+    inset 0 0 50px rgba(139, 69, 19, 0.08);
 }
 
 .right-page {
   border-radius: 0 12px 12px 0;
   border-left: 1px solid rgba(139, 69, 19, 0.2);
+  box-shadow:
+    inset 8px 0 16px rgba(139, 69, 19, 0.15),
+    inset 4px 0 8px rgba(101, 67, 33, 0.1),
+    inset 0 0 50px rgba(139, 69, 19, 0.08);
 }
 
 /* 页面内容 */
@@ -354,6 +368,21 @@ const getRestText = (text: string) => {
   flex-direction: column;
   font-family: 'Noto Serif SC', serif;
   color: #3C2415;
+  position: relative;
+  z-index: 2;
+}
+
+/* 为文字可读性添加半透明覆盖层 */
+.page-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(245, 230, 211, 0.3);
+  z-index: -1;
+  border-radius: inherit;
 }
 
 /* 左页样式 */
@@ -411,12 +440,14 @@ const getRestText = (text: string) => {
 }
 
 .script-title {
-  font-size: 28px;
-  font-weight: 700;
+  font-family: 'Dancing Script', 'Noto Serif SC', cursive;
+  font-size: 32px;
+  font-weight: 600;
   color: #2C1810;
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
   letter-spacing: 1px;
+  line-height: 1.3;
 }
 
 .script-author {
@@ -451,6 +482,9 @@ const getRestText = (text: string) => {
   padding: 2px 8px;
   border-radius: 4px;
   border: 1px dashed rgba(139, 69, 19, 0.3);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  font-weight: 400;
+  letter-spacing: 0.5px;
 }
 
 /* 难度星级 */
@@ -470,36 +504,92 @@ const getRestText = (text: string) => {
   text-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
 }
 
-/* 标签戳 */
+/* 标签戳 - 墨水印章风格 */
 .tag-stamps {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
 }
 
 .tag-stamp {
-  background: radial-gradient(circle, rgba(220, 20, 60, 0.8) 0%, rgba(139, 0, 0, 0.9) 100%);
+  position: relative;
+  /* 墨水印章基础样式 */
+  background:
+    radial-gradient(ellipse at center, #2C1810 0%, #1A0F08 100%);
   color: #F5E6D3;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 8px 16px;
+  /* 不规则边缘效果 */
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Courier New', 'Monaco', monospace;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: 1.2px;
+  /* 墨水印章的不规则边框 */
+  border: none;
   transform: rotate(-2deg);
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  /* 墨水渗透和模糊边缘效果 */
+  box-shadow:
+    /* 外部墨水渗透阴影 */
+    0 0 8px rgba(44, 24, 16, 0.6),
+    0 0 16px rgba(44, 24, 16, 0.3),
+    /* 内部纹理 */
+    inset 0 1px 2px rgba(245, 230, 211, 0.1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+  /* 墨水质感滤镜 */
+  filter:
+    drop-shadow(0 2px 4px rgba(44, 24, 16, 0.4))
+    contrast(1.1);
+}
+
+/* 创建不规则墨水边缘效果 */
+.tag-stamp::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(44, 24, 16, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(44, 24, 16, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 10%, rgba(44, 24, 16, 0.1) 0%, transparent 40%);
+  border-radius: 3px;
+  z-index: -1;
+  /* 墨水渗透动画 */
+  animation: inkBleed 3s ease-in-out infinite alternate;
+}
+
+@keyframes inkBleed {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0.8; transform: scale(1.02); }
 }
 
 .tag-stamp:nth-child(even) {
-  transform: rotate(1deg);
+  transform: rotate(1.5deg);
+  background:
+    radial-gradient(ellipse at center, #3C2415 0%, #2C1810 100%);
+}
+
+.tag-stamp:nth-child(3n) {
+  transform: rotate(-1deg);
+  background:
+    radial-gradient(ellipse at center, #5D4037 0%, #3C2415 100%);
 }
 
 .tag-stamp:hover {
   transform: rotate(0deg) scale(1.05);
+  /* 悬停时增强墨水效果 */
+  box-shadow:
+    0 0 12px rgba(44, 24, 16, 0.8),
+    0 0 20px rgba(44, 24, 16, 0.4),
+    inset 0 1px 2px rgba(245, 230, 211, 0.2),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+  filter:
+    drop-shadow(0 3px 6px rgba(44, 24, 16, 0.5))
+    contrast(1.2);
 }
 
 /* 行动按钮区域 */
@@ -508,33 +598,41 @@ const getRestText = (text: string) => {
   text-align: center;
 }
 
+/* 火漆印章 - 压印效果 */
 .wax-seal-button {
   position: relative;
   width: 120px;
   height: 120px;
   border: none;
   border-radius: 50%;
-  background: radial-gradient(circle, #8B0000 0%, #DC143C  50%, #8B0000 100%);
+  /* 蜡封基础背景 - 深红色蜡质感 */
+  background:
+    radial-gradient(circle at 35% 35%, rgba(220, 20, 60, 0.8) 0%, rgba(139, 0, 0, 0.9) 70%),
+    radial-gradient(circle, #8B0000 0%, #DC143C 50%, #8B0000 100%);
   cursor: pointer;
   transition: all 0.3s ease;
+  /* 外部阴影和蜡质纹理效果 */
   box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.3),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    0 8px 16px rgba(0, 0, 0, 0.4),
+    inset 0 3px 6px rgba(255, 255, 255, 0.15),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+    inset 0 0 20px rgba(139, 0, 0, 0.2);
 }
 
 .wax-seal-button:hover {
   transform: scale(1.05);
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+    0 12px 24px rgba(0, 0, 0, 0.5),
+    inset 0 3px 6px rgba(255, 255, 255, 0.2),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 25px rgba(139, 0, 0, 0.3);
 }
 
 .wax-seal-button:active {
   transform: scale(0.95);
 }
 
+/* 印章内容 - 压印凹陷效果 */
 .seal-content {
   position: relative;
   z-index: 2;
@@ -543,26 +641,61 @@ const getRestText = (text: string) => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #F5E6D3;
+  /* 压印文字效果 - 看起来像压进蜡里 */
+  color: rgba(139, 69, 19, 0.8); /* 羊皮纸色调 */
+  text-shadow:
+    /* 主要凹陷阴影 */
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.1),
+    /* 深度阴影 */
+    0 1px 0 rgba(0, 0, 0, 0.8),
+    0 -1px 0 rgba(255, 255, 255, 0.1);
+  /* 混合模式增强压印效果 */
+  mix-blend-mode: multiply;
 }
 
 .flame-icon {
   font-size: 24px;
   margin-bottom: 4px;
+  /* 火焰图标的压印效果 */
+  filter:
+    drop-shadow(inset 0 2px 3px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.1));
   animation: flicker 2s infinite alternate;
 }
 
 @keyframes flicker {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+    filter:
+      drop-shadow(inset 0 2px 3px rgba(0, 0, 0, 0.7))
+      drop-shadow(0 1px 0 rgba(255, 255, 255, 0.1));
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+    filter:
+      drop-shadow(inset 0 3px 4px rgba(0, 0, 0, 0.8))
+      drop-shadow(0 1px 0 rgba(255, 255, 255, 0.05));
+  }
 }
 
 .seal-text {
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  /* 打字机字体用于印章文字 */
+  font-family: 'Courier New', 'Monaco', monospace;
+  text-transform: uppercase;
+  /* 增强压印文字效果 */
+  text-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.8),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.1),
+    0 1px 0 rgba(0, 0, 0, 0.9);
 }
 
+/* 蜡质纹理和光泽效果 */
 .wax-effect {
   position: absolute;
   top: 0;
@@ -570,8 +703,14 @@ const getRestText = (text: string) => {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
+  /* 蜡质表面的不规则光泽 */
+  background:
+    radial-gradient(ellipse at 25% 25%, rgba(255, 255, 255, 0.2) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
+    radial-gradient(ellipse at 40% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 25%);
   pointer-events: none;
+  /* 增加蜡质纹理的不规则性 */
+  opacity: 0.8;
 }
 
 /* 右页样式 */
@@ -606,12 +745,15 @@ const getRestText = (text: string) => {
 }
 
 .story-text {
+  font-family: 'Noto Serif SC', 'Times New Roman', serif;
   font-size: 16px;
-  line-height: 1.8;
+  line-height: 2.0;
   color: #3C2415;
   margin: 0;
   text-align: justify;
   text-indent: 0;
+  letter-spacing: 0.3px;
+  word-spacing: 1px;
 }
 
 /* 首字下沉效果 */
