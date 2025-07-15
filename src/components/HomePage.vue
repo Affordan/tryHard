@@ -67,7 +67,21 @@
           <div class="content-layout">
             <!-- Scripts Grid -->
             <div class="scripts-section">
-              <div class="scripts-grid">
+              <!-- Loading State -->
+              <div v-if="isLoading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">正在加载剧本数据...</p>
+              </div>
+
+              <!-- Error State -->
+              <div v-else-if="error" class="error-container">
+                <div class="error-icon">⚠️</div>
+                <p class="error-text">{{ error }}</p>
+                <button @click="fetchScripts" class="retry-button">重试</button>
+              </div>
+
+              <!-- Scripts Grid -->
+              <div v-else class="scripts-grid">
                 <div
                   v-for="script in paginatedScripts"
                   :key="script.id"
@@ -139,10 +153,10 @@
               </div>
 
               <!-- Pagination -->
-              <div v-if="totalPages > 1" class="pagination">
+              <div v-if="!isLoading && !error && totalPages > 1" class="pagination">
                 <button
                   @click="setCurrentPage(Math.max(1, currentPage - 1))"
-                  :disabled="currentPage === 1"
+                  :disabled="currentPage === 1 || isLoading"
                   class="pagination-button"
                 >
                   <svg class="pagination-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -156,6 +170,7 @@
                     v-for="page in totalPages"
                     :key="page"
                     @click="setCurrentPage(page)"
+                    :disabled="isLoading"
                     :class="['page-button', { active: currentPage === page }]"
                   >
                     {{ page }}
@@ -164,7 +179,7 @@
 
                 <button
                   @click="setCurrentPage(Math.min(totalPages, currentPage + 1))"
-                  :disabled="currentPage === totalPages"
+                  :disabled="currentPage === totalPages || isLoading"
                   class="pagination-button"
                 >
                   下一页
@@ -192,6 +207,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import ScriptDossier from './ScriptDossier.vue'
 
 // 接口定义
@@ -211,6 +227,15 @@ interface Script {
     avatar: string
     description: string
   }[]
+  created_at?: string
+  updated_at?: string
+}
+
+// API 响应接口
+interface ScriptsResponse {
+  scripts: Script[]
+  total_pages: number
+  current_page: number
 }
 
 // 路由
@@ -221,161 +246,67 @@ const selectedCategory = ref('All')
 const selectedScript = ref<Script | null>(null)
 const searchQuery = ref('')
 const currentPage = ref(1)
+const pageSize = ref(8)
+const scripts = ref<Script[]>([])
+const totalPages = ref(0)
+const isLoading = ref(false)
+const error = ref<string | null>(null)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
-const SCRIPTS_PER_PAGE = 8
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 
-// 剧本数据
-const scripts: Script[] = [
-  {
-    id: "1",
-    title: "午夜图书馆",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Mystery",
-    tags: ["悬疑", "本格", "微恐"],
-    players: "6人 (3男3女)",
-    difficulty: 4,
-    duration: "约4小时",
-    author: "神秘作者",
-    description: "深夜的图书馆中，一位管理员神秘失踪。六位访客被困在这座古老的建筑中，必须在天亮前找出真相。每个人都有不可告人的秘密，而真相往往比想象中更加黑暗...",
-    characters: [
-      { name: "图书管理员", avatar: "/placeholder.svg?height=60&width=60", description: "知识渊博但性格孤僻的管理员" },
-      { name: "文学教授", avatar: "/placeholder.svg?height=60&width=60", description: "优雅的中年教授，对古籍情有独钟" },
-      { name: "神秘访客", avatar: "/placeholder.svg?height=60&width=60", description: "身份不明的年轻人，似乎在寻找什么" },
-    ],
-  },
-  {
-    id: "2",
-    title: "雾都疑案",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Hardcore",
-    tags: ["硬核", "推理", "维多利亚"],
-    players: "7人 (4男3女)",
-    difficulty: 5,
-    duration: "约5小时",
-    author: "推理大师",
-    description: "19世纪的伦敦，浓雾笼罩的街道上发生了一起离奇的谋杀案。作为苏格兰场的精英侦探们，你们必须在48小时内破解这个看似不可能的密室杀人案...",
-    characters: [
-      { name: "首席探长", avatar: "/placeholder.svg?height=60&width=60", description: "经验丰富的老探长，直觉敏锐" },
-      { name: "法医专家", avatar: "/placeholder.svg?height=60&width=60", description: "年轻的法医，擅长尸体检验" },
-    ],
-  },
-  {
-    id: "3",
-    title: "校园七不思议",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Horror",
-    tags: ["恐怖", "校园", "灵异"],
-    players: "5人 (2男3女)",
-    difficulty: 3,
-    duration: "约3小时",
-    author: "恐怖小说家",
-    description: "深夜的学校里流传着七个恐怖传说。当五位学生因为各种原因被困在校园中过夜时，他们发现这些传说正在一个个变成现实...",
-    characters: [
-      { name: "学生会长", avatar: "/placeholder.svg?height=60&width=60", description: "责任感强的优等生" },
-      { name: "问题学生", avatar: "/placeholder.svg?height=60&width=60", description: "叛逆的不良少年，实际上很善良" },
-    ],
-  },
-  {
-    id: "4",
-    title: "豪门恩怨",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Emotional",
-    tags: ["情感", "家族", "商战"],
-    players: "8人 (4男4女)",
-    difficulty: 3,
-    duration: "约4小时",
-    author: "情感编剧",
-    description: "富豪家族的继承人突然离世，巨额遗产的分配引发了家族内部的明争暗斗。每个人都有继承的理由，也都有杀人的动机...",
-    characters: [
-      { name: "大少爷", avatar: "/placeholder.svg?height=60&width=60", description: "表面风光的继承人，内心充满压力" },
-      { name: "管家", avatar: "/placeholder.svg?height=60&width=60", description: "服务家族多年的忠诚管家" },
-    ],
-  },
-  {
-    id: "5",
-    title: "太空站危机",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Mystery",
-    tags: ["科幻", "太空", "生存"],
-    players: "6人 (3男3女)",
-    difficulty: 4,
-    duration: "约4小时",
-    author: "科幻作家",
-    description: "2087年，国际空间站上的科研人员发现了一个惊人的秘密。但随着通讯中断，他们意识到危险不仅来自外太空，更来自身边的同伴...",
-    characters: [
-      { name: "指挥官", avatar: "/placeholder.svg?height=60&width=60", description: "经验丰富的太空站指挥官" },
-      { name: "科学家", avatar: "/placeholder.svg?height=60&width=60", description: "专注研究的天体物理学家" },
-    ],
-  },
-  {
-    id: "6",
-    title: "古堡之谜",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Joyful",
-    tags: ["欢乐", "古堡", "轻松"],
-    players: "6人 (3男3女)",
-    difficulty: 2,
-    duration: "约3小时",
-    author: "喜剧编剧",
-    description: "一群朋友受邀到古堡度假，却发现这里隐藏着一个有趣的宝藏谜题。在轻松愉快的氛围中，大家需要通过合作和推理来解开古堡的秘密...",
-    characters: [
-      { name: "古堡主人", avatar: "/placeholder.svg?height=60&width=60", description: "幽默风趣的古堡继承人" },
-      { name: "历史学家", avatar: "/placeholder.svg?height=60&width=60", description: "对古代历史充满热情的学者" },
-    ],
-  },
-  {
-    id: "7",
-    title: "深海实验室",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Horror",
-    tags: ["恐怖", "深海", "实验"],
-    players: "7人 (4男3女)",
-    difficulty: 4,
-    duration: "约5小时",
-    author: "恐怖大师",
-    description: "深海研究站中，科学家们正在进行一项秘密实验。当实验失控时，他们发现自己被困在了海底，而更可怕的是，实验体似乎还活着...",
-    characters: [
-      { name: "首席科学家", avatar: "/placeholder.svg?height=60&width=60", description: "野心勃勃的研究者" },
-      { name: "安全主管", avatar: "/placeholder.svg?height=60&width=60", description: "负责实验室安全的退役军人" },
-    ],
-  },
-  {
-    id: "8",
-    title: "时光咖啡馆",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Emotional",
-    tags: ["情感", "时光", "温馨"],
-    players: "5人 (2男3女)",
-    difficulty: 2,
-    duration: "约3小时",
-    author: "温情作家",
-    description: "一家神奇的咖啡馆，据说能让人回到过去的某个时刻。五位顾客各自带着遗憾来到这里，他们能否在这里找到内心的平静...",
-    characters: [
-      { name: "咖啡馆老板", avatar: "/placeholder.svg?height=60&width=60", description: "神秘而温和的老板娘" },
-      { name: "失恋青年", avatar: "/placeholder.svg?height=60&width=60", description: "刚刚失恋的大学生" },
-    ],
+// API 调用函数
+const fetchScripts = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
+
+    const params = new URLSearchParams({
+      page: currentPage.value.toString(),
+      page_size: pageSize.value.toString()
+    })
+
+    // 添加分类过滤
+    if (selectedCategory.value !== 'All') {
+      params.append('category', selectedCategory.value)
+    }
+
+    // 添加搜索查询
+    if (searchQuery.value.trim()) {
+      params.append('search', searchQuery.value.trim())
+    }
+
+    const apiUrl = `${API_BASE_URL}/scripts?${params}`
+    console.log('正在调用 API:', apiUrl)
+    console.log('请求参数:', {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      category: selectedCategory.value !== 'All' ? selectedCategory.value : undefined,
+      search: searchQuery.value.trim() || undefined
+    })
+
+    const response = await axios.get<ScriptsResponse>(apiUrl)
+
+    console.log('API 响应:', response.data)
+
+    scripts.value = response.data.scripts
+    totalPages.value = response.data.total_pages
+    currentPage.value = response.data.current_page
+
+  } catch (err) {
+    error.value = '获取剧本数据失败，请稍后重试'
+    console.error('API 调用失败:', err)
+    scripts.value = []
+    totalPages.value = 0
+  } finally {
+    isLoading.value = false
   }
-]
+}
 
 // 计算属性
-const filteredScripts = computed(() => {
-  return scripts.filter((script) => {
-    const matchesCategory = selectedCategory.value === 'All' || script.category === selectedCategory.value
-    const matchesSearch =
-      script.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      script.author.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      script.tags.some((tag) => tag.toLowerCase().includes(searchQuery.value.toLowerCase()))
-    return matchesCategory && matchesSearch
-  })
-})
-
-const totalPages = computed(() => Math.ceil(filteredScripts.value.length / SCRIPTS_PER_PAGE))
-
 const paginatedScripts = computed(() => {
-  const startIndex = (currentPage.value - 1) * SCRIPTS_PER_PAGE
-  return filteredScripts.value.slice(startIndex, startIndex + SCRIPTS_PER_PAGE)
+  return scripts.value
 })
 
 // 方法
@@ -383,11 +314,13 @@ const handleCategoryChange = (category: string) => {
   selectedCategory.value = category
   currentPage.value = 1
   selectedScript.value = null
+  fetchScripts()
 }
 
 const handleSearchChange = () => {
   currentPage.value = 1
   selectedScript.value = null
+  fetchScripts()
 }
 
 const setSelectedScript = (script: Script) => {
@@ -396,6 +329,7 @@ const setSelectedScript = (script: Script) => {
 
 const setCurrentPage = (page: number) => {
   currentPage.value = page
+  fetchScripts()
 }
 
 const startGame = () => {
@@ -407,6 +341,11 @@ const startGame = () => {
     })
   }
 }
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchScripts()
+})
 </script>
 
 <style scoped>
@@ -619,6 +558,75 @@ const startGame = () => {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(165, 180, 252, 0.2);
+  border-top: 4px solid #a5b4fc;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #cbd5e1;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Error State */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-text {
+  color: #f87171;
+  font-size: 16px;
+  margin: 0 0 24px 0;
+}
+
+.retry-button {
+  padding: 12px 24px;
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* Script Card */
