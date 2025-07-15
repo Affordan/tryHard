@@ -571,76 +571,33 @@ const startGame = () => {
   gap: 12px;
 }
 
-/* 复古档案风格分类按钮 */
 .category-button {
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-weight: 600;
+  padding: 8px 24px;
+  border-radius: 24px;
+  font-weight: 500;
   font-size: 14px;
-  font-family: 'Courier New', 'Monaco', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   transition: all 0.3s ease;
   cursor: pointer;
-  /* 档案标签样式 */
-  border: 2px solid rgba(139, 69, 19, 0.3);
-  background:
-    linear-gradient(135deg, #F5E6D3 0%, #E8D5B7 100%),
-    url('/background.png') center/cover;
-  color: #2C1810;
-  position: relative;
-  /* 纸质阴影效果 */
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3);
-}
-
-/* 纸质纹理叠加 */
-.category-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(ellipse at 25% 25%, rgba(139, 69, 19, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 75%, rgba(139, 69, 19, 0.02) 0%, transparent 40%);
-  border-radius: 2px;
-  pointer-events: none;
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  background: transparent;
+  color: #cbd5e1;
 }
 
 .category-button:hover {
-  border-color: rgba(139, 69, 19, 0.5);
-  color: #1A0F08;
-  background:
-    linear-gradient(135deg, #F0E1CE 0%, #E3D0B2 100%),
-    url('/background.png') center/cover;
-  transform: translateY(-1px);
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.25),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+  background: rgba(51, 65, 85, 0.3);
 }
 
 .category-button.active {
-  /* 激活状态 - 墨水印章效果 */
-  background:
-    radial-gradient(ellipse at center, #2C1810 0%, #1A0F08 100%);
-  color: #F5E6D3;
-  border-color: #8B4513;
-  box-shadow:
-    0 0 8px rgba(44, 24, 16, 0.6),
-    0 2px 4px rgba(0, 0, 0, 0.3),
-    inset 0 1px 2px rgba(245, 230, 211, 0.1);
-  /* 墨水渗透效果 */
-  filter: drop-shadow(0 2px 4px rgba(44, 24, 16, 0.4));
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
 .category-button.active:hover {
-  box-shadow:
-    0 0 12px rgba(44, 24, 16, 0.8),
-    0 3px 6px rgba(0, 0, 0, 0.4),
-    inset 0 1px 2px rgba(245, 230, 211, 0.15);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
   transform: translateY(-1px);
 }
 
@@ -664,63 +621,27 @@ const startGame = () => {
   margin-bottom: 40px;
 }
 
-/* 复古档案风格脚本卡片 */
+/* Script Card */
 .script-card {
-  /* 档案文件夹样式 */
-  background:
-    linear-gradient(135deg, #F5E6D3 0%, #E8D5B7 100%),
-    url('/background.png') center/cover;
-  border: 2px solid rgba(139, 69, 19, 0.3);
-  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative;
-  /* 档案文件阴影 */
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 2px rgba(255, 255, 255, 0.3),
-    inset 0 -1px 2px rgba(139, 69, 19, 0.1);
-}
-
-/* 档案文件纹理叠加 */
-.script-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(ellipse at 20% 20%, rgba(139, 69, 19, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(139, 69, 19, 0.03) 0%, transparent 50%),
-    linear-gradient(45deg, transparent 48%, rgba(139, 69, 19, 0.02) 49%, rgba(139, 69, 19, 0.02) 51%, transparent 52%);
-  pointer-events: none;
-  z-index: 1;
+  backdrop-filter: blur(4px);
 }
 
 .script-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.25),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4),
-    inset 0 -1px 2px rgba(139, 69, 19, 0.15);
-  border-color: rgba(139, 69, 19, 0.5);
-  background:
-    linear-gradient(135deg, #F0E1CE 0%, #E3D0B2 100%),
-    url('/background.png') center/cover;
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .script-card.selected {
-  /* 选中状态 - 重要档案标记 */
-  border: 3px solid #8B4513;
-  box-shadow:
-    0 0 12px rgba(139, 69, 19, 0.4),
-    0 6px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4);
-  background:
-    linear-gradient(135deg, #EDD8C0 0%, #E0CDA8 100%),
-    url('/background.png') center/cover;
+  border: 2px solid rgba(99, 102, 241, 0.5);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.2);
+  background: rgba(51, 65, 85, 0.6);
 }
 
 .script-cover {

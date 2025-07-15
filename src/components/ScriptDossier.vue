@@ -72,10 +72,7 @@
             <!-- 行动召唤按钮 -->
             <div class="action-section">
               <button class="wax-seal-button" @click="startGame">
-                <div class="seal-content">
-                  <div class="flame-icon">🔥</div>
-                  <span class="seal-text">封缄启程</span>
-                </div>
+                
                 <div class="wax-effect"></div>
               </button>
             </div>
@@ -504,92 +501,66 @@ const getRestText = (text: string) => {
   text-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
 }
 
-/* 标签戳 - 墨水印章风格 */
+/* 标签戳 */
 .tag-stamps {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
   margin-top: 16px;
 }
 
+/* 标签戳区域 */
+.tag-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px; /* 可以适当调整间距 */
+  margin-top: 16px;
+  justify-content: center; /* 让标签整体居中 */
+}
+
+/* 水墨风格 Tag */
 .tag-stamp {
-  position: relative;
-  /* 墨水印章基础样式 */
-  background:
-    radial-gradient(ellipse at center, #2C1810 0%, #1A0F08 100%);
-  color: #F5E6D3;
-  padding: 8px 16px;
-  /* 不规则边缘效果 */
-  border-radius: 2px;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'Courier New', 'Monaco', monospace;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  /* 墨水印章的不规则边框 */
+  /* 1. 基础布局和字体 */
+  padding: 8px 18px;
+  font-family: 'Noto Serif SC', serif; /* 使用衬线字体更有韵味 */
+  font-weight: 500;
+  font-size: 13px;
+  color: #E0E0E0; /* 使用柔和的灰白色代替纯白 */
+  letter-spacing: 1px;
+  transition: all 0.4s ease;
+
+  /* 2. 背景与颜色：用渐变代替纯色，模拟墨的浓淡 */
+  background: linear-gradient(145deg, #4a4a4a, #333333);
+  
+  /* 3. 这是实现不规则“墨迹”形态的关键 */
+  border-radius: 43% 57% 65% 35% / 51% 42% 58% 49%;
+  
+  /* 4. 边框与阴影：移除硬边框，用柔和阴影代替 */
   border: none;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 5px rgba(0, 0, 0, 0.3);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* 给文字也加上一点阴影，使其融入背景 */
+
+  /* 5. 初始旋转，增加随意感 */
   transform: rotate(-2deg);
-  transition: all 0.3s ease;
-  /* 墨水渗透和模糊边缘效果 */
-  box-shadow:
-    /* 外部墨水渗透阴影 */
-    0 0 8px rgba(44, 24, 16, 0.6),
-    0 0 16px rgba(44, 24, 16, 0.3),
-    /* 内部纹理 */
-    inset 0 1px 2px rgba(245, 230, 211, 0.1),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
-  /* 墨水质感滤镜 */
-  filter:
-    drop-shadow(0 2px 4px rgba(44, 24, 16, 0.4))
-    contrast(1.1);
 }
 
-/* 创建不规则墨水边缘效果 */
-.tag-stamp::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background:
-    radial-gradient(ellipse at 20% 30%, rgba(44, 24, 16, 0.3) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 70%, rgba(44, 24, 16, 0.2) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 10%, rgba(44, 24, 16, 0.1) 0%, transparent 40%);
-  border-radius: 3px;
-  z-index: -1;
-  /* 墨水渗透动画 */
-  animation: inkBleed 3s ease-in-out infinite alternate;
-}
-
-@keyframes inkBleed {
-  0% { opacity: 0.6; transform: scale(1); }
-  100% { opacity: 0.8; transform: scale(1.02); }
-}
-
+/* 6. 通过 :nth-child 让每个标签的形状和角度都独一无二 */
 .tag-stamp:nth-child(even) {
   transform: rotate(1.5deg);
-  background:
-    radial-gradient(ellipse at center, #3C2415 0%, #2C1810 100%);
+  border-radius: 65% 35% 43% 57% / 42% 58% 49% 51%;
 }
 
 .tag-stamp:nth-child(3n) {
-  transform: rotate(-1deg);
-  background:
-    radial-gradient(ellipse at center, #5D4037 0%, #3C2415 100%);
+  transform: rotate(3deg);
+  border-radius: 35% 65% 57% 43% / 58% 49% 51% 42%;
 }
 
+/* 7. 悬停效果：模拟墨迹变亮或“湿润”的感觉 */
 .tag-stamp:hover {
-  transform: rotate(0deg) scale(1.05);
-  /* 悬停时增强墨水效果 */
-  box-shadow:
-    0 0 12px rgba(44, 24, 16, 0.8),
-    0 0 20px rgba(44, 24, 16, 0.4),
-    inset 0 1px 2px rgba(245, 230, 211, 0.2),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
-  filter:
-    drop-shadow(0 3px 6px rgba(44, 24, 16, 0.5))
-    contrast(1.2);
+  transform: rotate(0deg) scale(1.08); /* 回正并放大 */
+  box-shadow: 4px 6px 15px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.2); /* 增加一点亮度 */
+  color: #FFFFFF;
 }
 
 /* 行动按钮区域 */
@@ -598,104 +569,58 @@ const getRestText = (text: string) => {
   text-align: center;
 }
 
-/* 火漆印章 - 压印效果 */
 .wax-seal-button {
   position: relative;
   width: 120px;
   height: 120px;
   border: none;
   border-radius: 50%;
-  /* 蜡封基础背景 - 深红色蜡质感 */
-  background:
-    radial-gradient(circle at 35% 35%, rgba(220, 20, 60, 0.8) 0%, rgba(139, 0, 0, 0.9) 70%),
-    radial-gradient(circle, #8B0000 0%, #DC143C 50%, #8B0000 100%);
+  background: radial-gradient(circle, #8B0000 0%, #DC143C  50%, #8B0000 100%);
   cursor: pointer;
   transition: all 0.3s ease;
-  /* 外部阴影和蜡质纹理效果 */
-  box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.4),
-    inset 0 3px 6px rgba(255, 255, 255, 0.15),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.3),
-    inset 0 0 20px rgba(139, 0, 0, 0.2);
+  background: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg') no-repeat center center;
+  background-size: cover; /* 确保背景图片完全覆盖按钮区域 */
 }
 
 .wax-seal-button:hover {
   transform: scale(1.05);
-  box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.5),
-    inset 0 3px 6px rgba(255, 255, 255, 0.2),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.4),
-    inset 0 0 25px rgba(139, 0, 0, 0.3);
+  background-image: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg');
 }
 
 .wax-seal-button:active {
   transform: scale(0.95);
 }
 
-/* 印章内容 - 压印凹陷效果 */
 .seal-content {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   height: 100%;
-  /* 压印文字效果 - 看起来像压进蜡里 */
-  color: rgba(139, 69, 19, 0.8); /* 羊皮纸色调 */
-  text-shadow:
-    /* 主要凹陷阴影 */
-    inset 0 2px 4px rgba(0, 0, 0, 0.6),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.1),
-    /* 深度阴影 */
-    0 1px 0 rgba(0, 0, 0, 0.8),
-    0 -1px 0 rgba(255, 255, 255, 0.1);
-  /* 混合模式增强压印效果 */
-  mix-blend-mode: multiply;
+  color: #F5E6D3;
+  padding-bottom: 20px; 
+  box-sizing: border-box; /* 确保 padding 不会撑大元素 */
 }
 
 .flame-icon {
   font-size: 24px;
   margin-bottom: 4px;
-  /* 火焰图标的压印效果 */
-  filter:
-    drop-shadow(inset 0 2px 3px rgba(0, 0, 0, 0.7))
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.1));
   animation: flicker 2s infinite alternate;
 }
 
 @keyframes flicker {
-  0%, 100% {
-    opacity: 0.9;
-    transform: scale(1);
-    filter:
-      drop-shadow(inset 0 2px 3px rgba(0, 0, 0, 0.7))
-      drop-shadow(0 1px 0 rgba(255, 255, 255, 0.1));
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.05);
-    filter:
-      drop-shadow(inset 0 3px 4px rgba(0, 0, 0, 0.8))
-      drop-shadow(0 1px 0 rgba(255, 255, 255, 0.05));
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
 }
 
 .seal-text {
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  /* 打字机字体用于印章文字 */
-  font-family: 'Courier New', 'Monaco', monospace;
-  text-transform: uppercase;
-  /* 增强压印文字效果 */
-  text-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.8),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.1),
-    0 1px 0 rgba(0, 0, 0, 0.9);
+  font-weight: 600;
+  letter-spacing: 1px;
 }
 
-/* 蜡质纹理和光泽效果 */
 .wax-effect {
   position: absolute;
   top: 0;
@@ -703,14 +628,8 @@ const getRestText = (text: string) => {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  /* 蜡质表面的不规则光泽 */
-  background:
-    radial-gradient(ellipse at 25% 25%, rgba(255, 255, 255, 0.2) 0%, transparent 40%),
-    radial-gradient(ellipse at 70% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
-    radial-gradient(ellipse at 40% 70%, rgba(255, 255, 255, 0.05) 0%, transparent 25%);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
   pointer-events: none;
-  /* 增加蜡质纹理的不规则性 */
-  opacity: 0.8;
 }
 
 /* 右页样式 */
