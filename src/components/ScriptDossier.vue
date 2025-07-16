@@ -20,9 +20,9 @@
             <!-- 剧本主视觉图 -->
             <div class="cover-section">
               <div class="cover-frame">
-                <img 
-                  :src="script.cover || '/placeholder.svg'" 
-                  :alt="script.title"
+                <img
+                  :src="getFullImageUrl(script?.cover)"
+                  :alt="script?.title"
                   class="cover-image"
                 />
                 <div class="photo-clip"></div>
@@ -31,8 +31,8 @@
 
             <!-- 标题与作者 -->
             <div class="title-section">
-              <h1 class="script-title">{{ script.title }}</h1>
-              <p class="script-author">{{ script.author }}</p>
+              <h1 class="script-title">{{ script?.title }}</h1>
+              <p class="script-author">{{ script?.author }}</p>
             </div>
 
             <!-- 核心信息标签 -->
@@ -40,29 +40,29 @@
               <div class="stamp-item">
                 <span class="stamp-label">案件密级：</span>
                 <div class="difficulty-stars">
-                  <span 
-                    v-for="i in 5" 
-                    :key="i" 
+                  <span
+                    v-for="i in 5"
+                    :key="i"
                     class="star"
-                    :class="{ active: i <= script.difficulty }"
+                    :class="{ active: i <= (script?.difficulty || 0) }"
                   >★</span>
                 </div>
               </div>
               
               <div class="stamp-item">
                 <span class="stamp-label">探员人数：</span>
-                <span class="stamp-value">{{ script.players }}</span>
+                <span class="stamp-value">{{ script?.players }}</span>
               </div>
-              
+
               <div class="stamp-item">
                 <span class="stamp-label">预计时长：</span>
-                <span class="stamp-value">{{ script.duration }}</span>
+                <span class="stamp-value">{{ script?.duration }}</span>
               </div>
 
               <!-- 标签戳 -->
               <div class="tag-stamps">
-                <span 
-                  v-for="tag in script.tags" 
+                <span
+                  v-for="tag in script?.tags || []"
                   :key="tag"
                   class="tag-stamp"
                 >{{ tag }}</span>
@@ -87,7 +87,7 @@
               <h2 class="section-title">故事简介</h2>
               <div class="story-content" :class="{ 'show-character': hoveredCharacter }">
                 <p v-if="!hoveredCharacter" class="story-text">
-                  <span class="drop-cap">{{ getFirstChar(script.description) }}</span>{{ getRestText(script.description) }}
+                  <span class="drop-cap">{{ getFirstChar(script?.description || '') }}</span>{{ getRestText(script?.description || '') }}
                 </p>
                 <div v-else class="character-detail">
                   <h3 class="character-name">{{ hoveredCharacter.name }}</h3>
@@ -100,15 +100,15 @@
             <div class="characters-section">
               <h3 class="characters-title">人物档案</h3>
               <div class="character-photos">
-                <div 
-                  v-for="character in script.characters" 
+                <div
+                  v-for="character in script?.characters || []"
                   :key="character.name"
                   class="character-photo"
                   @mouseenter="hoveredCharacter = character"
                   @mouseleave="hoveredCharacter = null"
                 >
-                  <img 
-                    :src="character.avatar || '/placeholder.svg'" 
+                  <img
+                    :src="getFullImageUrl(character.avatar)"
                     :alt="character.name"
                     class="character-avatar"
                   />
@@ -128,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 // 接口定义
 interface Script {
@@ -147,6 +147,21 @@ interface Script {
     avatar: string
     description: string
   }[]
+}
+
+// 定义后端静态资源基地址常量
+const BACKEND_STATIC_URL = 'http://127.0.0.1:8000'
+
+// 创建URL拼接辅助方法
+const getFullImageUrl = (path: string | undefined | null): string => {
+  if (!path) {
+    return '/placeholder.svg' // 无路径时返回占位图
+  }
+  if (path.startsWith('http')) {
+    return path // 已是完整URL直接返回
+  }
+  // 拼接后端地址和相对路径
+  return `${BACKEND_STATIC_URL}${path}`
 }
 
 // Props

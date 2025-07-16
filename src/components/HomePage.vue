@@ -1,6 +1,11 @@
 <template>
   <div class="home-page">
     <!-- Background Pattern -->
+    <div class="background-blobs">
+      <div class="blob purple"></div>
+      <div class="blob yellow"></div>
+      <div class="blob blue"></div>
+    </div>
     <div class="background-pattern"></div>
 
     <div class="content-wrapper">
@@ -91,7 +96,7 @@
                   <!-- Cover Image -->
                   <div class="script-cover">
                     <img
-                      :src="script.cover || '/placeholder.svg'"
+                      :src="getFullImageUrl(script.cover)"
                       :alt="script.title"
                       class="cover-image"
                     />
@@ -152,8 +157,11 @@
                 </div>
               </div>
 
+              <!-- 调试信息 -->
+  
+
               <!-- Pagination -->
-              <div v-if="!isLoading && !error && totalPages > 1" class="pagination">
+              <div v-if="!isLoading && !error && scripts.length > 0" class="pagination">
                 <button
                   @click="setCurrentPage(Math.max(1, currentPage - 1))"
                   :disabled="currentPage === 1 || isLoading"
@@ -167,7 +175,7 @@
 
                 <div class="page-numbers">
                   <button
-                    v-for="page in totalPages"
+                    v-for="page in Math.max(1, totalPages)"
                     :key="page"
                     @click="setCurrentPage(page)"
                     :disabled="isLoading"
@@ -178,8 +186,8 @@
                 </div>
 
                 <button
-                  @click="setCurrentPage(Math.min(totalPages, currentPage + 1))"
-                  :disabled="currentPage === totalPages || isLoading"
+                  @click="setCurrentPage(Math.min(Math.max(1, totalPages), currentPage + 1))"
+                  :disabled="currentPage >= Math.max(1, totalPages) || isLoading"
                   class="pagination-button"
                 >
                   下一页
@@ -187,6 +195,14 @@
                     <polyline points="9,18 15,12 9,6"></polyline>
                   </svg>
                 </button>
+              </div>
+
+              <!-- 分页状态信息 -->
+              <div v-if="!isLoading && !error && scripts.length > 0" class="pagination-info">
+                <span class="pagination-status">
+                  第 {{ currentPage }} 页，共 {{ Math.max(1, totalPages) }} 页 |
+                  显示 {{ scripts.length }} 个剧本
+                </span>
               </div>
             </div>
 
@@ -246,7 +262,7 @@ const selectedCategory = ref('All')
 const selectedScript = ref<Script | null>(null)
 const searchQuery = ref('')
 const currentPage = ref(1)
-const pageSize = ref(8)
+const pageSize = ref(6)
 const scripts = ref<Script[]>([])
 const totalPages = ref(0)
 const isLoading = ref(false)
@@ -255,6 +271,21 @@ const error = ref<string | null>(null)
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
+
+// 定义后端静态资源基地址常量
+const BACKEND_STATIC_URL = 'http://127.0.0.1:8000'
+
+// 创建URL拼接辅助方法
+const getFullImageUrl = (path: string | undefined | null): string => {
+  if (!path) {
+    return '/placeholder.svg' // 无路径时返回占位图
+  }
+  if (path.startsWith('http')) {
+    return path // 已是完整URL直接返回
+  }
+  // 拼接后端地址和相对路径
+  return `${BACKEND_STATIC_URL}${path}`
+}
 
 // API 调用函数
 const fetchScripts = async () => {
@@ -290,9 +321,33 @@ const fetchScripts = async () => {
 
     console.log('API 响应:', response.data)
 
-    scripts.value = response.data.scripts
-    totalPages.value = response.data.total_pages
-    currentPage.value = response.data.current_page
+    // 处理不同的API响应格式
+    let scriptsData: Script[] = []
+    let totalPagesData = 1
+    let currentPageData = currentPage.value;
+
+    if (response.data.scripts) {
+      // 格式1: { scripts: [], total_pages: number, current_page: number }
+      scriptsData = response.data.scripts
+      totalPagesData = response.data.total_pages || 1
+      
+    } else if (Array.isArray(response.data)) {
+      // 格式2: 直接返回数组，需要前端分页
+      scriptsData = response.data
+      totalPagesData = Math.ceil(scriptsData.length / pageSize.value)
+      
+    } else {
+      // 其他格式，尝试直接使用
+      scriptsData = response.data.scripts || []
+      totalPagesData = 1
+      currentPageData = 1
+    }
+
+ 
+
+    scripts.value = scriptsData
+    totalPages.value = totalPagesData
+    currentPage.value = currentPageData
 
   } catch (err) {
     error.value = '获取剧本数据失败，请稍后重试'
@@ -349,17 +404,148 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
 .home-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  /* 呼吸灯背景设置 */
+  overflow: hidden;
+  background-color: #0f1c2c;
   position: relative;
+  overflow-y: auto;
 }
+/* 在 <style> 区域中 - 添加这些新样式 */
+
+.background-blobs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* 将它放置在基础背景之上 */
+}
+
+.blob {
+  position: absolute; /* 使用绝对定位，让它们可以自由移动 */
+  border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; /* 圆形 */
+  /* 使用模糊滤镜来模拟柔和的边缘，效果类似径向渐变 */
+  filter: blur(30px);
+  /* 这是一个给浏览器的优化提示，告诉它这两个属性即将改变 */
+  will-change: transform, opacity, border-radius;
+  animation: morph 8s ease-in-out infinite;
+  transform-origin: center center;
+}
+@keyframes morph {
+  0%, 100% {
+    border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%;
+  }
+  50% {
+    border-radius: 30% 70% 40% 60% / 60% 50% 50% 40%;
+  }
+}
+/* 定义每个色块的颜色、尺寸和动画 */
+.blob.purple {
+  width: 600px;
+  height: 600px;
+  background: rgba(80, 31, 214, 0.3);
+  animation: move-purple 5s infinite cubic-bezier(0.4, 0, 0.6, 1),
+             morph 8s ease-in-out infinite;
+}
+
+.blob.yellow {
+  width: 800px;
+  height: 700px;
+  background: rgba(232, 183, 58, 0.2);
+  animation: move-yellow 8s infinite cubic-bezier(0.4, 0, 0.6, 1),
+  morph 8s ease-in-out infinite;
+}
+
+.blob.blue {
+  width: 750px;
+  height: 450px;
+  background: rgba(48, 118, 232, 0.15);
+  animation: move-blue 10s infinite cubic-bezier(0.4, 0, 0.6, 1),
+             morph 8s ease-in-out infinite;
+}
+
+@keyframes move-purple {
+  0%, 100% {
+    /* 初始状态：增加一个初始旋转角度 */
+    transform: translate(10vw, 10vh) scale(1) rotate(-15deg);
+    opacity: 0.3;
+  }
+  50% {
+    /* 中间状态：改变位置、缩放，并旋转到另一个角度 */
+    transform: translate(25vw, -20vh) scale(1.2) rotate(20deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes move-yellow {
+  0%, 100% {
+    transform: translate(80vw, 70vh) scale(1) rotate(10deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(60vw, 90vh) scale(0.8) rotate(-25deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes move-blue {
+  0%, 100% {
+    transform: translate(40vw, 20vh) scale(1) rotate(5deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(50vw, 30vh) scale(1.3) rotate(30deg);
+    opacity: 0.25;
+  }
+}
+
+/* 调整内容的 z-index 以确保它显示在最上层 */
+.content-wrapper {
+  position: relative;
+  z-index: 10;
+}
+
+.background-pattern {
+  position: absolute;
+  inset: 0;
+  /* 提升 z-index，让它位于色块和内容之间 */
+  z-index: 2;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23A5B4FC' fillOpacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: pattern-breathe 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
+}
+
 
 .background-pattern {
   position: absolute;
   inset: 0;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23A5B4FC' fillOpacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: pattern-breathe 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes pattern-breathe {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    opacity: 0.06;
+    transform: scale(1.01) rotate(0.5deg);
+  }
+  50% {
+    opacity: 0.08;
+    transform: scale(1.02) rotate(1deg);
+  }
+  75% {
+    opacity: 0.06;
+    transform: scale(1.01) rotate(0.5deg);
+  }
 }
 
 .content-wrapper {
@@ -714,17 +900,69 @@ onMounted(() => {
 }
 
 .tag {
-  padding: 4px 8px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  will-change: transform, box-shadow;
+
+  /* 统一的青色系配色方案 */
+  background: linear-gradient(135deg,
+    rgba(6, 182, 212, 0.18) 0%,
+    rgba(14, 165, 233, 0.12) 50%,
+    rgba(59, 130, 246, 0.15) 100%);
+  color: #67e8f9;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  box-shadow:
+    0 2px 8px rgba(6, 182, 212, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: left;
 }
 
 .tag:hover {
-  background: rgba(16, 185, 129, 0.2);
+  transform: translateY(-3px) scale(1.08);
+  background: linear-gradient(135deg,
+    rgba(6, 182, 212, 0.28) 0%,
+    rgba(14, 165, 233, 0.22) 50%,
+    rgba(59, 130, 246, 0.25) 100%);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow:
+    0 8px 25px rgba(6, 182, 212, 0.15),
+    0 4px 12px rgba(14, 165, 233, 0.1),
+    0 0 30px rgba(6, 182, 212, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: #a7f3d0;
+}
+
+.tag:hover::before {
+  left: 100%;
+}
+
+.tag:active {
+  transform: translateY(-1px) scale(1.05);
+  transition: all 0.1s ease;
 }
 
 .script-stats {
@@ -829,6 +1067,17 @@ onMounted(() => {
   border-color: transparent;
 }
 
+/* 分页状态信息 */
+.pagination-info {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.pagination-status {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
 
 
 /* Responsive Design */
@@ -859,4 +1108,6 @@ onMounted(() => {
     justify-content: center;
   }
 }
+
+
 </style>

@@ -81,7 +81,7 @@
             try {
                 showStatus('正在测试基本 API 连接...', 'info');
                 
-                const url = `${API_BASE_URL}/scripts?page=1&page_size=8`;
+                const url = `${API_BASE_URL}/scripts?page=1&page_size=6`;
                 console.log('请求 URL:', url);
                 
                 const response = await fetch(url);
@@ -107,7 +107,7 @@
             try {
                 showStatus('正在测试分页功能...', 'info');
                 
-                const url = `${API_BASE_URL}/scripts?page=2&page_size=4`;
+                const url = `${API_BASE_URL}/scripts?page=2&page_size=6`;
                 console.log('请求 URL:', url);
                 
                 const response = await fetch(url);
@@ -130,7 +130,7 @@
             try {
                 showStatus('正在测试分类过滤...', 'info');
                 
-                const url = `${API_BASE_URL}/scripts?page=1&page_size=8&category=Mystery`;
+                const url = `${API_BASE_URL}/scripts?page=1&page_size=6&category=Mystery`;
                 console.log('请求 URL:', url);
                 
                 const response = await fetch(url);
@@ -153,7 +153,7 @@
             try {
                 showStatus('正在测试搜索功能...', 'info');
                 
-                const url = `${API_BASE_URL}/scripts?page=1&page_size=8&search=test`;
+                const url = `${API_BASE_URL}/scripts?page=1&page_size=6&search=test`;
                 console.log('请求 URL:', url);
                 
                 const response = await fetch(url);
