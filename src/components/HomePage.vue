@@ -16,9 +16,9 @@
             <!-- Logo -->
             <div class="logo-section">
               <div class="logo-icon">
-                <span>迷</span>
+                <span>Take</span>
               </div>
-              <h1 class="logo-title">迷雾剧场</h1>
+              <h1 class="logo-title">her script</h1>
             </div>
 
             <!-- Search -->
@@ -39,12 +39,12 @@
 
             <!-- User Menu -->
             <div class="user-menu">
-              <div class="user-button">
+              <button @click="goToProfile" class="user-button">
                 <div class="user-avatar">
                   <span>玩家</span>
                 </div>
                 <span class="user-name">神秘玩家</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -397,6 +397,10 @@ const startGame = () => {
   }
 }
 
+const goToProfile = () => {
+  router.push({ name: 'profile' })
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchScripts()
@@ -661,11 +665,17 @@ onMounted(() => {
   border-radius: 12px;
   color: #cbd5e1;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  background: transparent;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .user-button:hover {
   background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+  transform: translateY(-1px);
 }
 
 .user-avatar {

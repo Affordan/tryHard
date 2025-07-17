@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/components/HomePage.vue'
 import GalgameInterface from '@/components/GalgameInterface.vue'
+import UserProfile from '@/components/UserProfile.vue'
 
 const routes = [
   {
@@ -17,6 +18,14 @@ const routes = [
     component: GalgameInterface,
     meta: {
       title: '游戏中 - 迷雾剧场'
+    }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: UserProfile,
+    meta: {
+      title: '个人中心 - 迷雾剧场'
     }
   },
   {
