@@ -669,7 +669,7 @@ const recommendedScenarios: RecommendedScenario[] = [
     players: "4-6人",
     rating: 4.8,
     tags: ["冒险", "推理", "探索"],
-    image: "/placeholder.svg?height=200&width=300",
+    image: "/1.jpg",
     matchReason: "基于您对推理剧本的喜爱",
   },
   {
@@ -681,7 +681,7 @@ const recommendedScenarios: RecommendedScenario[] = [
     players: "3-5人",
     rating: 4.9,
     tags: ["赛博朋克", "潜行", "动作"],
-    image: "/placeholder.svg?height=200&width=300",
+    image: "/2.jpg",
     matchReason: "完美适合赛博朋克爱好者",
   },
   {
@@ -693,7 +693,7 @@ const recommendedScenarios: RecommendedScenario[] = [
     players: "3-6人",
     rating: 4.7,
     tags: ["奇幻", "战斗", "魔法"],
-    image: "/placeholder.svg?height=200&width=300",
+    image: "/3.jpg",
     matchReason: "推荐给奇幻爱好者",
   },
 ]
