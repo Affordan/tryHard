@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/components/HomePage.vue'
 import GalgameInterface from '@/components/GalgameInterface.vue'
 import UserProfile from '@/components/UserProfile.vue'
+import GameWait from '@/components/GameWait.vue'
 
 const routes = [
   {
@@ -10,6 +11,14 @@ const routes = [
     component: HomePage,
     meta: {
       title: '迷雾剧场 - 剧本杀游戏'
+    }
+  },
+  {
+    path: '/wait/:scriptId?',
+    name: 'wait',
+    component: GameWait,
+    meta: {
+      title: '等待匹配 - 迷雾剧场'
     }
   },
   {
