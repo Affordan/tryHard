@@ -270,10 +270,10 @@ const error = ref<string | null>(null)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
-const API_BASE_URL = 'http://192.168.1.105:8000/api/v1'
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 
 // 定义后端静态资源基地址常量
-const BACKEND_STATIC_URL = 'http://192.168.1.105:8000'
+const BACKEND_STATIC_URL = 'http://127.0.0.1:8000'
 
 // 创建URL拼接辅助方法
 const getFullImageUrl = (path: string | undefined | null): string => {

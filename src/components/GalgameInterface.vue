@@ -17,20 +17,16 @@
 
       <!-- Dialogue System -->
       <DialogueSystem
-        :is-ai-processing="isAIProcessing"
-        :current-dialogue="currentDialogue"
-        :active-character="displayedCharacter"
+        :is-ai-processing="isLoading" :current-dialogue="currentDialogue"
+        :active-character="activeCharacter"
         :displayed-text="displayedDialogueText"
         :is-typing="isTypingActive"
         :can-continue="canContinue"
-        :current-scene-index="currentSceneIndex"
-        :total-scenes="scriptData.length"
-        :processing-progress="processingProgress"
+        :current-scene-index="currentMonologueIndex" :total-scenes="monologueQueue.length" :processing-progress="processingProgress"
         :show-user-interface="showUserInterface"
         :user-input="userInputText"
         @skip-typing="skipTypingEffect"
-        @continue-scene="advanceToNextScene"
-        @submit-input="submitUserInput"
+        @continue-scene="handleContinue" @submit-input="submitUserInput"
         @update-input="userInputText = $event"
       />
 
@@ -245,6 +241,7 @@ import { useSceneTransition } from '@/composables/useSceneTransition'
 import { useAISelection } from '@/composables/useAISelection'
 import { useQuestionTemplates } from '@/composables/useQuestionTemplates'
 import { useInteractionSystem } from '@/composables/useInteractionSystem'
+import { useGameLogic, type Monologue } from '@/composables/useGameLogic' // 引入新的组合式函数
 
 // 使用组合式函数
 const { characterDatabase, sceneBackgrounds, scriptData } = useGameData()
@@ -283,6 +280,17 @@ const {
   processUserQuestion
 } = useInteractionSystem()
 
+// 新增：使用我们的核心游戏逻辑
+const {
+  sessionId,
+  monologueQueue,
+  currentMonologueIndex,
+  isLoading,
+  error,
+  startGame,
+  advanceToNextMonologue
+} = useGameLogic()
+
 // 历史记录类型定义
 interface HistoryItem {
   character: {
@@ -306,6 +314,10 @@ const completedSceneHistory = ref<HistoryItem[]>([])
 const selectedInterrogationCharacter = ref<CharacterData | null>(null)
 const isInterrogationMode = ref(false)
 const customQuestion = ref('')
+
+// 新增：当前活跃角色状态
+const activeCharacter = ref<any>(null) // 当前说话的角色信息
+const canContinue = ref(false)
 
 // 下拉选择器状态
 const isCharacterDropdownOpen = ref(false)
@@ -331,22 +343,13 @@ const recommendedQuestions = ref([
 ])
 
 // 计算属性
-const activeCharacter = computed(() => {
-  const currentScene = scriptData[currentSceneIndex.value]
-  return currentScene?.characterData || null
-})
-
 // 当前显示的角色（优先显示审讯角色，否则显示剧情角色）
 const displayedCharacter = computed(() => {
   return selectedInterrogationCharacter.value || activeCharacter.value
 })
 
 const isCharacterSpeaking = computed(() => {
-  return !isAIProcessing.value && currentDialogue.text && isTypingActive.value
-})
-
-const canContinue = computed(() => {
-  return !isTypingActive.value && currentSceneIndex.value < scriptData.length - 1
+  return !isLoading.value && currentDialogue.text && isTypingActive.value
 })
 
 // 新增计算属性
@@ -426,6 +429,56 @@ const getCharacterWelcomeMessage = (character: CharacterData): string => {
 // 选择审讯角色 (保留原方法以兼容)
 const selectCharacterForInterrogation = (character: CharacterData) => {
   selectCharacterFromDropdown(character)
+}
+
+/**
+ * 处理 "继续" 按钮的点击事件
+ */
+const handleContinue = () => {
+  if (isTypingActive.value) {
+    skipTypingEffect()
+    return
+  }
+
+  const nextMonologue = advanceToNextMonologue()
+
+  if (nextMonologue) {
+    // 找到角色的详细数据（为了显示头像等）
+    const characterData = characterDatabase[nextMonologue.characterId]
+    if (characterData) {
+      activeCharacter.value = characterData
+    } else {
+      // 如果在数据库中找不到，使用默认数据
+      activeCharacter.value = {
+        characterId: nextMonologue.characterId,
+        characterName: nextMonologue.characterId,
+        characterImageURL: '/placeholder.svg',
+        llmName: 'AI Model',
+        characterRole: 'Unknown',
+        llmProvider: 'Unknown',
+        themeColor: '#667eea',
+        characterMood: 'neutral',
+        sceneId: 'default'
+      }
+    }
+
+    // 将多句话合并成一段话，用换行符连接
+    const fullMonologueText = nextMonologue.sentences.join('\n\n')
+
+    currentDialogue.text = fullMonologueText
+    currentDialogue.characterId = nextMonologue.characterId
+    startTypingEffect(fullMonologueText)
+
+    // 独白进行中，可以继续
+    canContinue.value = true
+  } else {
+    // 所有独白结束
+    console.log("所有独白已结束，可以进入下一阶段，例如QNA")
+    currentDialogue.text = "所有角色介绍完毕，现在可以开始自由提问了。"
+    startTypingEffect(currentDialogue.text)
+    // 独白结束，禁用继续按钮
+    canContinue.value = false
+  }
 }
 
 // 拖动相关方法
@@ -678,18 +731,16 @@ const goToHome = () => {
   router.push('/')
 }
 
-// 初始化
-onMounted(() => {
-  transitionToScene(0, {
-    scriptData,
-    currentSceneIndex,
-    currentSceneId,
-    currentDialogue,
-    isAIProcessing,
-    processingProgress,
-    startTypingEffect,
-    completedSceneHistory
-  })
+// 初始化游戏
+onMounted(async () => {
+  const scriptId = route.params.scriptId as string
+  if (scriptId) {
+    await startGame(scriptId)
+    // 游戏开始后，自动触发第一个角色的独白
+    if (monologueQueue.value.length > 0) {
+      handleContinue()
+    }
+  }
 
   // 添加全局事件监听器
   document.addEventListener('click', handleClickOutside)
