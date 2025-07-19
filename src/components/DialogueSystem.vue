@@ -123,7 +123,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="user-input-section">
         <textarea
           :value="userInput"
@@ -133,9 +133,9 @@
           class="user-input-field"
           rows="3"
         ></textarea>
-        <button 
-          @click="$emit('submitInput')" 
-          :disabled="!userInput.trim()" 
+        <button
+          @click="$emit('submitInput')"
+          :disabled="!userInput.trim()"
           class="submit-input-button"
         >
           <span class="button-text">发送</span>
@@ -143,11 +143,22 @@
         </button>
       </div>
     </div>
+
+    <!-- Debug fallback -->
+    <div v-else class="debug-fallback">
+      <h3>DialogueSystem Debug Info:</h3>
+      <p>isAiProcessing: {{ isAiProcessing }}</p>
+      <p>currentDialogue.text: "{{ currentDialogue?.text }}"</p>
+      <p>showUserInterface: {{ showUserInterface }}</p>
+      <p>Component is rendered but no condition matched</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { watch } from 'vue'
+
+const props = defineProps({
   isAiProcessing: Boolean,
   currentDialogue: Object,
   activeCharacter: Object,
@@ -162,6 +173,15 @@ defineProps({
 })
 
 defineEmits(['skipTyping', 'continueScene', 'submitInput', 'updateInput'])
+
+// Debug: Watch for changes in currentDialogue
+watch(() => props.currentDialogue, (newVal) => {
+  console.log('DialogueSystem received currentDialogue:', newVal)
+}, { immediate: true, deep: true })
+
+watch(() => props.canContinue, (newVal) => {
+  console.log('DialogueSystem received canContinue:', newVal)
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -172,6 +192,10 @@ defineEmits(['skipTyping', 'continueScene', 'submitInput', 'updateInput'])
   right: 0;
   z-index: 20;
   max-height: 50vh;
+  min-height: 200px;
+  /* Temporary debug background */
+  background: rgba(255, 0, 0, 0.3);
+  border: 5px solid red;
 }
 
 .ai-processing-display {
@@ -487,5 +511,22 @@ defineEmits(['skipTyping', 'continueScene', 'submitInput', 'updateInput'])
 .submit-input-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.debug-fallback {
+  background: rgba(255, 255, 0, 0.8);
+  color: black;
+  padding: 2rem;
+  border: 3px solid orange;
+  font-family: monospace;
+}
+
+.debug-fallback h3 {
+  margin-top: 0;
+  color: red;
+}
+
+.debug-fallback p {
+  margin: 0.5rem 0;
 }
 </style>

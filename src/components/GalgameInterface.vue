@@ -12,7 +12,7 @@
       <CharacterPanel
         :active-character="displayedCharacter"
         :is-character-speaking="isCharacterSpeaking"
-        :is-ai-processing="isAIProcessing"
+        :is-ai-processing="isLoading"
       />
 
       <!-- Dialogue System -->
@@ -23,7 +23,9 @@
         :displayed-text="displayedDialogueText"
         :is-typing="isTypingActive"
         :can-continue="canContinue"
-        :current-scene-index="currentSentenceIndex" :total-scenes="unifiedMonologueQueue.length" :processing-progress="0"
+        :current-scene-index="currentSentenceIndex"
+        :total-scenes="unifiedMonologueQueue.length"
+        :processing-progress="0"
         :show-user-interface="showUserInterface"
         :user-input="userInputText"
         @skip-typing="skipTypingEffect"
@@ -63,240 +65,68 @@
       :class="{ 'dragging': isDragging }"
     ></div>
 
-    <!-- Right Panel: Interactive Interrogation Sidebar -->
-    <div class="interrogation-sidebar" :style="{ width: sidebarWidth + '%' }">
+    <div class="interrogation-sidebar">
 
-      <!-- Q&A Phase Interface -->
-      <div v-if="gamePhase === 'qna'" class="sidebar-content">
-
-        <div class="sidebar-section">
-          <div class="section-header">
-            <h3 class="section-title">🎯 审讯阶段</h3>
-            <p class="section-subtitle">选择角色并提出问题</p>
-          </div>
-
-          <div class="character-list">
-            <button
-              v-for="charId in availableCharacters"
-              :key="charId"
-              @click="selectedCharacterId = charId"
-              :class="['character-button', { active: selectedCharacterId === charId }]"
-            >
-              {{ getCharacterDisplayName(charId) }}
-            </button>
-          </div>
-        </div>
-
-        <div class="sidebar-section">
-          <div class="section-header">
-            <h3 class="section-title">💬 输入问题</h3>
-            <p class="section-subtitle">向选中的角色提问</p>
-          </div>
-
-          <textarea
-            v-model="customQuestion"
-            placeholder="在这里输入你想问的问题..."
-            class="custom-question-textarea-qna"
-            rows="5"
-          ></textarea>
-
-          <button
-            @click="handleAskQuestion"
-            :disabled="!customQuestion.trim() || !selectedCharacterId || isLoading"
-            class="ask-question-button-qna"
-          >
-            {{ isLoading ? '思考中...' : '发送审讯' }}
-          </button>
-        </div>
-
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
-
-      </div>
-
-      <!-- Monologue Phase Placeholder -->
-      <div v-else class="sidebar-placeholder">
-        <div class="placeholder-content">
-          <h3>🎭 独白阶段</h3>
-          <p>请点击"继续"按钮，等待所有角色完成开场陈述。</p>
-          <div class="progress-info">
-            <div class="progress-text">进度: {{ currentSentenceIndex }}/{{ unifiedMonologueQueue.length }}</div>
-            <div class="progress-bar-mini">
-              <div
-                class="progress-fill-mini"
-                :style="{ width: unifiedMonologueQueue.length > 0 ? (currentSentenceIndex / unifiedMonologueQueue.length * 100) + '%' : '0%' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Character Selection Area (Original - now hidden during Q&A) -->
-      <div v-if="gamePhase !== 'qna'" class="sidebar-section character-selection-section enhanced-dropdown">
-        <!-- 简化标题，让组件本身说明一切 -->
-
-        <!-- Dropdown Character Selector -->
-        <div class="character-dropdown-container">
-          <div
-            class="character-dropdown-trigger"
-            @click="toggleCharacterDropdown"
-            :class="{
-              'expanded': isCharacterDropdownOpen,
-              'transitioning': isSceneTransitioning
-            }"
-          >
-            <div class="selected-character-display">
-              <div class="character-avatar-small">
-                <img
-                  :src="(selectedInterrogationCharacter || availableCharacters[0])?.characterImageURL"
-                  :alt="(selectedInterrogationCharacter || availableCharacters[0])?.characterName"
-                />
-                <div class="character-status-dot online"></div>
-              </div>
-              <div class="character-details">
-                <div class="character-name-small">
-                  {{ (selectedInterrogationCharacter || availableCharacters[0])?.characterName }}
-                </div>
-                <div class="character-role-small">
-                  {{ (selectedInterrogationCharacter || availableCharacters[0])?.characterRole }}
-                </div>
-              </div>
-            </div>
-            <div class="dropdown-arrow" :class="{ 'rotated': isCharacterDropdownOpen }">
-              ▼
-            </div>
-          </div>
-
-          <!-- Dropdown List -->
-          <transition name="dropdown-slide">
-            <div v-if="isCharacterDropdownOpen" class="character-dropdown-list">
-              <div
-                v-for="character in availableCharacters"
-                :key="character.characterId"
-                @click="selectCharacterFromDropdown(character)"
-                class="character-dropdown-item"
-                :class="{
-                  'selected': selectedInterrogationCharacter?.characterId === character.characterId,
-                  'active': activeCharacter?.characterId === character.characterId
-                }"
-                :style="{ '--character-color': character.themeColor }"
-              >
-                <div class="character-avatar-small">
-                  <img :src="character.characterImageURL" :alt="character.characterName" />
-                  <div class="character-status-dot online"></div>
-                </div>
-                <div class="character-details">
-                  <div class="character-name-small">{{ character.characterName }}</div>
-                  <div class="character-role-small">{{ character.characterRole }}</div>
-                </div>
-                <div v-if="selectedInterrogationCharacter?.characterId === character.characterId" class="selected-indicator">
-                  ✓
-                </div>
-              </div>
-            </div>
-          </transition>
-        </div>
-      </div>
-
-      <!-- History & Recommendations Section -->
       <div class="sidebar-section history-section">
-        <div class="section-header">
-          <h3 class="section-title">询问历史</h3>
-          <p class="section-subtitle">最近的对话记录</p>
-        </div>
-
-        <!-- Recent Questions History -->
-        <div class="history-list" v-if="questionHistory.length > 0">
-          <div
-            v-for="(item, index) in questionHistory.slice(-5)"
-            :key="index"
-            class="history-item"
-          >
-            <div class="history-question">
-              <span class="history-icon">❓</span>
-              <span class="history-text">{{ item.question }}</span>
-            </div>
-            <div class="history-answer" v-if="item.answer">
-              <span class="history-icon">💬</span>
-              <span class="history-text">{{ item.answer.substring(0, 100) }}{{ item.answer.length > 100 ? '...' : '' }}</span>
-            </div>
+        <h3 class="section-title">询问历史</h3>
+        <div class="history-log" ref="historyLogRef">
+          <div v-if="interactionHistory.length === 0" class="history-placeholder">
+            还没有任何记录...
           </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else class="empty-history">
-          <p>还没有询问记录</p>
-          <p class="empty-subtitle">开始提问来查看历史记录</p>
-        </div>
-
-        <!-- Recommended Questions -->
-        <div class="recommended-questions">
-          <h4 class="recommendations-title">推荐问题</h4>
-          <div class="recommendation-list">
-            <button
-              v-for="(question, index) in recommendedQuestions"
-              :key="index"
-              @click="handleQuestionSelection(question)"
-              class="recommendation-button"
-            >
-              {{ question }}
-            </button>
+          <div v-for="(entry, index) in interactionHistory" :key="index" :class="['history-entry', `entry-${entry.type}`]">
+            <div v-if="entry.type === 'system'" class="system-message">{{ entry.content }}</div>
+            <div v-else-if="entry.type === 'monologue'">
+              <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
+              <span class="history-content">{{ entry.content }}</span>
+            </div>
+            <div v-else-if="entry.type === 'question'">
+              <span class="history-speaker player">{{ getDisplayName(entry.questionerId, characters) }}</span>
+              <span> 对 </span>
+              <span class="history-speaker">{{ getDisplayName(entry.targetCharacterId, characters) }}</span>
+              <span> 说: </span>
+              <span class="history-content question">"{{ entry.content }}"</span>
+            </div>
+            <div v-else-if="entry.type === 'answer'">
+              <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
+              <span class="history-content answer">{{ entry.content }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Custom Question Input Section -->
-      <div class="sidebar-section custom-question-section">
-        <div class="section-header">
-          <h3 class="section-title">自定义问题</h3>
-          <p class="section-subtitle">输入你想问的问题</p>
-        </div>
-
-        <div class="custom-question-input-area">
-          <textarea
-            v-model="customQuestion"
-            placeholder="输入你想问的问题..."
-            class="custom-question-textarea-sidebar"
-            rows="3"
-          ></textarea>
+      <div class="sidebar-section ask-section">
+        <h3 class="section-title">提问</h3>
+        <div class="character-tabs">
           <button
-            @click="askCustomQuestion"
-            :disabled="!customQuestion.trim()"
-            class="ask-question-btn"
+            v-for="char in interrogationTargets"
+            :key="char.id"
+            @click="selectedCharacterId = char.id"
+            :class="['tab-item', { active: selectedCharacterId === char.id }]"
+            :disabled="gamePhase !== 'qna'"
           >
-            <span class="btn-icon">💬</span>
-            <span class="btn-text">提问</span>
-          </button>
+            {{ char.id }} </button>
         </div>
-      </div>
-
-      <!-- Current Interrogation Status -->
-      <div v-if="selectedInterrogationCharacter" class="sidebar-section interrogation-status-section">
-        <div class="section-header">
-          <h3 class="section-title">当前审讯</h3>
-        </div>
-
-        <div class="current-interrogation-info">
-          <div class="interrogation-target">
-            <img :src="selectedInterrogationCharacter.characterImageURL" :alt="selectedInterrogationCharacter.characterName" class="target-avatar" />
-            <div class="target-info">
-              <div class="target-name">{{ selectedInterrogationCharacter.characterName }}</div>
-              <div class="target-role">{{ selectedInterrogationCharacter.characterRole }}</div>
-              <div class="target-ai">{{ selectedInterrogationCharacter.llmName }}</div>
-            </div>
-          </div>
-          <button @click="exitInterrogationMode" class="exit-interrogation-button">
-            结束审讯
-          </button>
-        </div>
+        <textarea
+          v-model="customQuestion"
+          placeholder="在此输入你对角色的提问..."
+          class="custom-question-textarea"
+          rows="4"
+          :disabled="gamePhase !== 'qna' || isLoading"
+        ></textarea>
+        <button
+          @click="handleAskQuestion"
+          :disabled="!customQuestion.trim() || !selectedCharacterId || isLoading || gamePhase !== 'qna'"
+          class="ask-question-button"
+        >
+          发送问题
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BackgroundSystem from './BackgroundSystem.vue'
 import CharacterPanel from './CharacterPanel.vue'
@@ -307,20 +137,16 @@ import HistoryModal from './HistoryModal.vue'
 import { useGameData, type CharacterData } from '@/composables/useGameData'
 import { useDialogueSystem } from '@/composables/useDialogueSystem'
 import { useSceneTransition } from '@/composables/useSceneTransition'
-import { useAISelection } from '@/composables/useAISelection'
-import { useQuestionTemplates } from '@/composables/useQuestionTemplates'
-import { useInteractionSystem } from '@/composables/useInteractionSystem'
-import { useGameLogic, type MonologueEntry } from '@/composables/useGameLogic' // 引入更新后的组合式函数
+// 引入最新的 useGame 和 getDisplayName
+import { useGame, getDisplayName } from '@/composables/useGame';
 
 // 使用组合式函数
-const { characterDatabase, sceneBackgrounds, scriptData } = useGameData()
+const { characterDatabase, sceneBackgrounds } = useGameData()
 const {
   currentSceneIndex,
   currentDialogue,
   displayedDialogueText,
   isTypingActive,
-  isAIProcessing,
-  processingProgress,
   startTypingEffect,
   skipTypingEffect
 } = useDialogueSystem()
@@ -328,42 +154,19 @@ const {
 const {
   isSceneTransitioning,
   nextCharacterData,
-  currentSceneId,
-  transitionToScene
+  currentSceneId
 } = useSceneTransition()
 
-// 交互系统
+// --- 状态管理 ---
+const route = useRoute();
+const router = useRouter();
 const {
-  selectedAI,
-  selectAI,
-  mapCharacterToAI
-} = useAISelection()
-
-const {
-  questionTemplates,
-  addToRecentQuestions,
-  getContextualQuestions
-} = useQuestionTemplates()
-
-const {
-  processUserQuestion
-} = useInteractionSystem()
-
-// 使用更新后的核心游戏逻辑
-const {
-  sessionId,
+  isLoading, gamePhase, characters, interactionHistory,
+  interrogationTargets, // 使用过滤后的提问对象
   unifiedMonologueQueue,
   currentSentenceIndex,
-  isLoading,
-  error,
-  startGame,
-  advanceToNextSentence,
-  // 新增：Q&A相关状态和方法
-  gamePhase,
-  availableCharacters,
-  latestAnswer,
-  askQuestion
-} = useGameLogic()
+  startGame, advanceMonologue, askQuestion, addHistoryEntry
+} = useGame();
 
 // 历史记录类型定义
 interface HistoryItem {
@@ -386,7 +189,6 @@ const completedSceneHistory = ref<HistoryItem[]>([])
 
 // 角色审讯系统状态
 const selectedInterrogationCharacter = ref<CharacterData | null>(null)
-const isInterrogationMode = ref(false)
 const customQuestion = ref('')
 
 // 新增：当前活跃角色状态
@@ -396,28 +198,12 @@ const canContinue = ref(false)
 // Q&A阶段状态
 const selectedCharacterId = ref<string | null>(null)
 
-// 下拉选择器状态
-const isCharacterDropdownOpen = ref(false)
-
 // 可拖动侧边栏状态
 const sidebarWidth = ref(30) // 默认30%
 const isDragging = ref(false)
 
-// 历史记录状态
-interface QuestionHistoryItem {
-  question: string
-  answer: string
-  timestamp: Date
-  characterId: string
-}
-
-const questionHistory = ref<QuestionHistoryItem[]>([])
-
-// 推荐问题
-const recommendedQuestions = ref([
-  '你能告诉我更多关于这个案件的细节吗？',
-  '你当时在现场看到了什么？'
-])
+// --- 本地组件状态 ---
+const historyLogRef = ref<HTMLElement | null>(null);
 
 // 计算属性
 // 当前显示的角色（优先显示审讯角色，否则显示剧情角色）
@@ -429,80 +215,44 @@ const isCharacterSpeaking = computed(() => {
   return !isLoading.value && currentDialogue.text && isTypingActive.value
 })
 
-// 新增计算属性
-const contextualQuestions = computed(() => {
-  // 在审讯模式下，显示所有问题类别
-  if (isInterrogationMode.value) {
-    return questionTemplates
-  }
-  // 否则显示基于场景的上下文问题
-  return getContextualQuestions(currentSceneId.value, activeCharacter.value?.characterId || '')
-})
+// --- 方法 ---
+/**
+ * 处理独白条目的通用函数
+ */
+const processMonologueEntry = (entry: any) => {
+  // 🔥 关键修改：在用户点击"继续"时才添加到历史记录
+  addHistoryEntry({
+    type: 'monologue',
+    characterId: entry.characterId,
+    content: entry.sentence
+  })
 
-// 注意：availableCharacters 现在从 useGameLogic 获取
-
-// 下拉选择器相关方法
-const toggleCharacterDropdown = () => {
-  isCharacterDropdownOpen.value = !isCharacterDropdownOpen.value
-}
-
-const selectCharacterFromDropdown = async (character: CharacterData) => {
-  console.log('🎭 选择审讯角色:', character.characterName)
-  console.log('当前剧情角色:', activeCharacter.value?.characterName)
-
-  // 如果选择的是当前角色，直接关闭下拉框
-  if (selectedInterrogationCharacter.value?.characterId === character.characterId) {
-    isCharacterDropdownOpen.value = false
-    return
-  }
-
-  // 开始角色切换过渡
-  isSceneTransitioning.value = true
-  nextCharacterData.value = character
-
-  // 延迟一下以显示过渡效果
-  setTimeout(() => {
-    selectedInterrogationCharacter.value = character
-    isInterrogationMode.value = true
-    isCharacterDropdownOpen.value = false // 选择后关闭下拉框
-    console.log('审讯模式已激活，审讯角色:', character.characterName)
-
-    // 自动映射角色到对应的AI
-    const mappedAI = mapCharacterToAI(character)
-    selectAI(mappedAI)
-
-    // 显示角色欢迎语
-    const welcomeMessage = getCharacterWelcomeMessage(character)
-    if (welcomeMessage) {
-      currentDialogue.text = welcomeMessage
-      currentDialogue.characterId = character.characterId
-      startTypingEffect(welcomeMessage)
-      console.log('显示欢迎语:', welcomeMessage)
+  // 根据 characterId 找到角色的详细数据以显示头像等
+  const characterData = characterDatabase[entry.characterId]
+  if (characterData) {
+    activeCharacter.value = characterData
+  } else {
+    // 如果在数据库中找不到，使用默认数据
+    activeCharacter.value = {
+      characterId: entry.characterId,
+      characterName: entry.characterId,
+      characterImageURL: '/placeholder.svg',
+      llmName: 'AI Model',
+      characterRole: 'Unknown',
+      llmProvider: 'Unknown',
+      themeColor: '#667eea',
+      characterMood: 'neutral',
+      sceneId: 'default'
     }
-
-    // 结束过渡
-    setTimeout(() => {
-      isSceneTransitioning.value = false
-      nextCharacterData.value = null
-    }, 500)
-  }, 300)
-}
-
-// 获取角色欢迎消息
-const getCharacterWelcomeMessage = (character: CharacterData): string => {
-  const welcomeMessages: Record<string, string> = {
-    'sherlock': '很好，你想要询问什么？我的推理能力随时为你服务。',
-    'watson': '医生在此，有什么医学相关的问题吗？',
-    'moriarty': '有趣...你想从我这里得到什么信息呢？',
-    'default': `你好，我是${character.characterName}。有什么想要了解的吗？`
   }
 
-  return welcomeMessages[character.characterId] || welcomeMessages['default']
-}
+  // 更新对话内容为当前句子
+  currentDialogue.text = entry.sentence
+  currentDialogue.characterId = entry.characterId
+  startTypingEffect(entry.sentence)
 
-// 选择审讯角色 (保留原方法以兼容)
-const selectCharacterForInterrogation = (character: CharacterData) => {
-  selectCharacterFromDropdown(character)
+  // 只要队列里还有话，就可以继续
+  canContinue.value = true
 }
 
 /**
@@ -514,72 +264,45 @@ const handleContinue = () => {
     return
   }
 
-  const nextEntry = advanceToNextSentence()
+  // 如果当前是系统初始消息，直接开始第一个独白
+  if (currentDialogue.characterId === 'system' && currentDialogue.text.includes('欢迎来到剧本杀游戏')) {
+    // 开始第一个独白
+    const firstEntry = advanceMonologue()
+    if (firstEntry) {
+      // 处理第一个独白条目
+      processMonologueEntry(firstEntry)
+    }
+    return
+  }
+
+  const nextEntry = advanceMonologue()
 
   if (nextEntry) {
-    // 根据 characterId 找到角色的详细数据以显示头像等
-    const characterData = characterDatabase[nextEntry.characterId]
-    if (characterData) {
-      activeCharacter.value = characterData
-    } else {
-      // 如果在数据库中找不到，使用默认数据
-      activeCharacter.value = {
-        characterId: nextEntry.characterId,
-        characterName: nextEntry.characterId,
-        characterImageURL: '/placeholder.svg',
-        llmName: 'AI Model',
-        characterRole: 'Unknown',
-        llmProvider: 'Unknown',
-        themeColor: '#667eea',
-        characterMood: 'neutral',
-        sceneId: 'default'
-      }
-    }
-
-    // 更新对话内容为当前句子
-    currentDialogue.text = nextEntry.sentence
-    currentDialogue.characterId = nextEntry.characterId
-    startTypingEffect(nextEntry.sentence)
-
-    // 只要队列里还有话，就可以继续
-    canContinue.value = true
+    processMonologueEntry(nextEntry)
   } else {
     // 所有独白结束，进入提问环节
     console.log("所有角色独白已完成，进入提问环节。")
+
+    // 🔥 添加系统消息到历史记录，表示独白阶段结束
+    addHistoryEntry({
+      type: 'system',
+      content: '所有角色独白完成，现在可以开始提问了！'
+    })
+
     activeCharacter.value = null // 清空当前角色
     currentDialogue.text = "第一幕：所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。"
     startTypingEffect(currentDialogue.text)
 
     // 禁用"继续"按钮，因为独白阶段结束了
     canContinue.value = false
-
-    // 在这里可以添加逻辑来显示提问UI
-    // showUserInterface.value = true
   }
 }
 
-/**
- * (新增) 处理点击"发送审讯"按钮的逻辑
- */
 const handleAskQuestion = async () => {
-  if (!customQuestion.value.trim() || !selectedCharacterId.value) return
-
-  // 假设当前玩家ID为 "神探李"
-  const currentPlayerId = "神探李"
-
-  await askQuestion(selectedCharacterId.value, customQuestion.value, currentPlayerId)
-
-  // 清空输入框
-  customQuestion.value = ''
-}
-
-/**
- * 获取角色显示名称
- */
-const getCharacterDisplayName = (characterId: string): string => {
-  const characterData = characterDatabase[characterId]
-  return characterData ? characterData.characterName : characterId
-}
+  if (!customQuestion.value.trim() || !selectedCharacterId.value) return;
+  await askQuestion(selectedCharacterId.value, customQuestion.value);
+  customQuestion.value = '';
+};
 
 // 拖动相关方法
 const startDragging = (event: MouseEvent) => {
@@ -606,125 +329,6 @@ const startDragging = (event: MouseEvent) => {
   document.addEventListener('mouseup', handleMouseUp)
 }
 
-// 退出审讯模式
-const exitInterrogationMode = () => {
-  console.log('🔄 退出审讯模式开始')
-  console.log('当前审讯角色:', selectedInterrogationCharacter.value?.characterName)
-  console.log('当前剧情角色:', activeCharacter.value?.characterName)
-  console.log('当前场景索引:', currentSceneIndex.value)
-
-  selectedInterrogationCharacter.value = null
-  isInterrogationMode.value = false
-  customQuestion.value = ''
-
-  // 恢复到当前剧情场景的对话状态
-  const currentScene = scriptData[currentSceneIndex.value]
-  console.log('当前场景数据:', currentScene)
-
-  if (currentScene && currentScene.dialogueText) {
-    currentDialogue.text = currentScene.dialogueText
-    currentDialogue.characterId = currentScene.characterData?.characterId || ''
-    console.log('恢复对话内容:', currentScene.dialogueText)
-    console.log('恢复角色ID:', currentScene.characterData?.characterId)
-    // 重新开始打字效果以显示当前剧情对话
-    startTypingEffect(currentScene.dialogueText)
-  } else {
-    // 如果没有当前场景对话，清空对话显示
-    currentDialogue.text = ''
-    currentDialogue.characterId = ''
-    displayedDialogueText.value = ''
-    console.log('清空对话显示')
-  }
-
-  console.log('🔄 退出审讯模式完成')
-}
-
-// 提问自定义问题
-const askCustomQuestion = async () => {
-  if (!customQuestion.value.trim()) return
-
-  const question = customQuestion.value.trim()
-  customQuestion.value = ''
-
-  // 处理自定义问题
-  await handleQuestionSelection(question)
-}
-
-// 处理问题选择
-const handleQuestionSelection = async (question: string) => {
-  addToRecentQuestions(question)
-
-  // 确定要审讯的角色
-  const targetCharacter = selectedInterrogationCharacter.value || activeCharacter.value
-
-  // 处理用户问题
-  try {
-    // 先添加用户问题到历史
-    completedSceneHistory.value.push({
-      character: {
-        characterId: 'user',
-        characterName: '调查员',
-        characterImageURL: '/placeholder.svg?height=50&width=50&text=User',
-        llmName: 'Human Player'
-      },
-      dialogueText: `问: ${question}`,
-      timestamp: new Date()
-    })
-
-    const response = await processUserQuestion(question, selectedAI.value, {
-      currentScene: scriptData[currentSceneIndex.value],
-      character: targetCharacter
-    })
-
-    // 添加到问题历史记录
-    questionHistory.value.push({
-      question: question,
-      answer: response,
-      timestamp: new Date(),
-      characterId: targetCharacter?.characterId || 'unknown'
-    })
-
-    // 将角色响应添加到对话历史
-    completedSceneHistory.value.push({
-      character: {
-        characterId: targetCharacter?.characterId || 'ai_response',
-        characterName: targetCharacter?.characterName || selectedAI.value.name,
-        characterImageURL: targetCharacter?.characterImageURL || '/placeholder.svg?height=50&width=50&text=AI',
-        llmName: targetCharacter?.llmName || selectedAI.value.name
-      },
-      dialogueText: response,
-      timestamp: new Date()
-    })
-
-    // 在审讯模式下，更新当前对话显示
-    if (isInterrogationMode.value && targetCharacter) {
-      currentDialogue.text = response
-      currentDialogue.characterId = targetCharacter.characterId
-      startTypingEffect(response)
-    }
-  } catch (error) {
-    console.error('处理问题时出错:', error)
-  }
-}
-
-// 场景推进
-const advanceToNextScene = () => {
-  if (currentSceneIndex.value < scriptData.length - 1) {
-    transitionToScene(currentSceneIndex.value + 1, {
-      scriptData,
-      currentSceneIndex,
-      currentSceneId,
-      currentDialogue,
-      isAIProcessing,
-      processingProgress,
-      startTypingEffect,
-      completedSceneHistory
-    })
-  } else {
-    showUserInterface.value = true
-  }
-}
-
 // 控制函数
 const restartScript = () => {
   currentSceneIndex.value = 0
@@ -732,16 +336,6 @@ const restartScript = () => {
   showUserInterface.value = false
   currentDialogue.text = ''
   displayedDialogueText.value = ''
-  transitionToScene(0, {
-    scriptData,
-    currentSceneIndex,
-    currentSceneId,
-    currentDialogue,
-    isAIProcessing,
-    processingProgress,
-    startTypingEffect,
-    completedSceneHistory
-  })
 }
 
 const toggleAutoAdvance = () => {
@@ -774,99 +368,72 @@ const submitUserInput = () => {
   showUserInterface.value = false
 }
 
-// (新增) 监听`latestAnswer`的变化，当有新回答时，更新左侧对话框
-watch(latestAnswer, (newAnswer) => {
-  if (newAnswer && selectedCharacterId.value) {
-    // 找到被提问角色的信息
-    const characterData = characterDatabase[selectedCharacterId.value]
-    if (characterData) {
-      activeCharacter.value = characterData
-    } else {
-      // 如果在数据库中找不到，使用默认数据
-      activeCharacter.value = {
-        characterId: selectedCharacterId.value,
-        characterName: selectedCharacterId.value,
-        characterImageURL: '/placeholder.svg',
-        llmName: 'AI Model',
-        characterRole: 'Unknown',
-        llmProvider: 'Unknown',
-        themeColor: '#667eea',
-        characterMood: 'neutral',
-        sceneId: 'default'
-      }
-    }
-
-    currentDialogue.text = newAnswer
-    currentDialogue.characterId = selectedCharacterId.value
-    startTypingEffect(newAnswer)
-  }
-})
-
-// 监听自动推进
-watch(() => isTypingActive.value, (newValue) => {
-  if (!newValue && autoAdvanceEnabled.value && canContinue.value) {
-    setTimeout(() => {
-      advanceToNextScene()
-    }, 2500)
-  }
-})
-
-// 点击外部关闭下拉框
-const handleClickOutside = (event: Event) => {
-  const target = event.target as HTMLElement
-  const dropdown = document.querySelector('.character-dropdown-container')
-  if (dropdown && !dropdown.contains(target)) {
-    isCharacterDropdownOpen.value = false
-  }
-}
-
-// 键盘快捷键处理
-const handleKeydown = (event: KeyboardEvent) => {
-  // ESC键关闭下拉框
-  if (event.key === 'Escape' && isCharacterDropdownOpen.value) {
-    isCharacterDropdownOpen.value = false
-    event.preventDefault()
-  }
-
-  // 数字键快速选择角色 (1-9)
-  if (event.key >= '1' && event.key <= '9' && !isCharacterDropdownOpen.value) {
-    const index = parseInt(event.key) - 1
-    if (index < availableCharacters.value.length) {
-      selectCharacterFromDropdown(availableCharacters.value[index])
-      event.preventDefault()
-    }
-  }
-}
-
-// 路由相关
-const route = useRoute()
-const router = useRouter()
-
-// 获取路由参数中的剧本ID
-const scriptId = computed(() => route.params.scriptId as string)
-
-// 监听剧本ID变化，可以在这里根据不同的剧本加载不同的数据
-watch(scriptId, (newScriptId) => {
-  if (newScriptId) {
-    console.log('选中的剧本ID:', newScriptId)
-    // 这里可以根据剧本ID加载对应的剧本数据
-    // 目前使用默认数据，后续可以扩展
-  }
-}, { immediate: true })
-
 // 返回主页的方法
 const goToHome = () => {
   router.push('/')
 }
 
+// 获取路由参数中的剧本ID
+const scriptId = computed(() => route.params.scriptId as string)
+
+// --- 生命周期与监听 ---
 // 初始化游戏
 onMounted(async () => {
   const scriptId = route.params.scriptId as string
+  console.log('GalgameInterface mounted with scriptId:', scriptId)
+
   if (scriptId) {
-    await startGame(scriptId)
-    // 游戏数据加载完毕后，自动触发第一句话
+    console.log('Starting game...')
+    await startGame(scriptId, '神探李')
+    console.log('Game started. unifiedMonologueQueue length:', unifiedMonologueQueue.value.length)
+
+    // 游戏数据加载完毕后，设置初始欢迎消息
     if (unifiedMonologueQueue.value.length > 0) {
-      handleContinue()
+      console.log('Setting up initial dialogue...')
+      // 设置初始对话状态，提示用户可以开始游戏
+      currentDialogue.text = "欢迎来到剧本杀游戏！点击【继续】按钮开始角色独白。"
+      currentDialogue.characterId = "system"
+      console.log('Setting initial dialogue:', currentDialogue)
+      startTypingEffect(currentDialogue.text)
+      canContinue.value = true
+      console.log('canContinue set to:', canContinue.value)
+
+      // 设置一个系统角色用于显示初始消息
+      activeCharacter.value = {
+        characterId: 'system',
+        characterName: '游戏系统',
+        characterImageURL: '/placeholder.svg?height=60&width=60&text=🎭',
+        llmName: '系统提示',
+        characterRole: 'System',
+        llmProvider: 'System',
+        themeColor: '#667eea',
+        characterMood: 'neutral',
+        sceneId: 'default'
+      }
+      console.log('activeCharacter set to:', activeCharacter.value)
+    } else {
+      console.log('No monologue queue available, showing fallback message')
+      // 如果没有独白队列，显示一个备用消息和测试数据
+      currentDialogue.text = "游戏加载失败或后端不可用。这是测试模式，点击【继续】查看对话界面。"
+      currentDialogue.characterId = "system"
+      startTypingEffect(currentDialogue.text)
+      canContinue.value = true
+
+      // 设置一个系统角色用于显示测试消息
+      activeCharacter.value = {
+        characterId: 'system',
+        characterName: '测试系统',
+        characterImageURL: '/placeholder.svg?height=60&width=60&text=🎭',
+        llmName: '测试模式',
+        characterRole: 'System',
+        llmProvider: 'Test',
+        themeColor: '#667eea',
+        characterMood: 'neutral',
+        sceneId: 'default'
+      }
+
+      // 注意：无法直接修改 unifiedMonologueQueue，因为它是只读的
+      console.log('Test mode: dialogue interface should still be visible')
     }
   }
 
@@ -877,11 +444,46 @@ onMounted(async () => {
   window.addEventListener('scroll', handleWindowResize)
 })
 
+// 监听自动推进
+watch(() => isTypingActive.value, (newValue) => {
+  if (!newValue && autoAdvanceEnabled.value && canContinue.value) {
+    setTimeout(() => {
+      handleContinue()
+    }, 2500)
+  }
+})
+
+// 监听剧本ID变化，可以在这里根据不同的剧本加载不同的数据
+watch(scriptId, (newScriptId) => {
+  if (newScriptId) {
+    console.log('选中的剧本ID:', newScriptId)
+    // 这里可以根据剧本ID加载对应的剧本数据
+    // 目前使用默认数据，后续可以扩展
+  }
+}, { immediate: true })
+
+watch(interactionHistory, () => {
+  nextTick(() => {
+    const logEl = historyLogRef.value;
+    if (logEl) {
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  });
+}, { deep: true });
+
+// 点击外部关闭下拉框
+const handleClickOutside = (_event: Event) => {
+  // 简化处理
+}
+
+// 键盘快捷键处理
+const handleKeydown = (_event: KeyboardEvent) => {
+  // 简化处理
+}
+
 // 窗口大小改变时关闭下拉框（简化处理）
 const handleWindowResize = () => {
-  if (isCharacterDropdownOpen.value) {
-    isCharacterDropdownOpen.value = false
-  }
+  // 简化处理
 }
 
 // 清理事件监听器
@@ -894,7 +496,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Two-Panel Layout */
+/* 严格按照新设计图的样式 */
+:root {
+  --sidebar-bg: #1a202c;
+  --sidebar-section-bg: #2d3748;
+  --sidebar-border-color: #4a5568;
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --accent-color: #4c51bf;
+  --player-color: #38b2ac; /* 青色，用于玩家高亮 */
+}
+
 .galgame-main-container {
   display: flex;
   width: 100vw;
@@ -911,714 +523,131 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* Right Panel: Interrogation Sidebar (30%) */
+/* Resizable Divider */
+.resize-divider {
+  width: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: col-resize;
+  transition: background-color 0.2s;
+}
+
+.resize-divider:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.resize-divider.dragging {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Right Panel: Interactive Interrogation Sidebar (30%) */
 .interrogation-sidebar {
   flex: 0 0 30%;
   height: 100vh;
-  background: linear-gradient(180deg, rgba(20, 20, 40, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%);
+  background: var(--sidebar-bg);
+  color: var(--text-primary);
   border-left: 2px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(20px);
   overflow-y: auto;
-  overflow-x: visible; /* 确保下拉框不被水平裁剪 */
+  overflow-x: visible;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
 }
 
-/* Sidebar Sections */
 .sidebar-section {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: var(--sidebar-section-bg);
+  border-radius: 8px;
   padding: 1rem;
-  backdrop-filter: blur(10px);
-}
-
-.section-header {
-  margin-bottom: 1rem;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
 }
 
 .section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 0.25rem 0;
-}
-
-.section-subtitle {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
 }
 
-/* Character Selection Section */
-.character-selection-section {
-  flex-shrink: 0;
-}
-
-/* Enhanced Dropdown Section - 更亮的背景色和不同描边 */
-.character-selection-section.enhanced-dropdown {
-  background: rgba(255, 255, 255, 0.08); /* 比问题类别稍亮 */
-  border: 2px solid rgba(102, 126, 234, 0.3); /* 不同的描边颜色 */
-  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.1);
-  overflow: visible; /* 确保下拉框不被裁剪 */
-  z-index: 1000; /* 提高section的层级 */
-}
-
-/* Character Dropdown Styles */
-.character-dropdown-container {
-  position: relative;
-  z-index: 9999; /* 确保容器本身有足够高的层级 */
-}
-
-.character-dropdown-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.character-dropdown-trigger:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: #667eea;
-}
-
-.character-dropdown-trigger.expanded {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  border-color: #667eea;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.character-dropdown-trigger.transitioning {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.character-dropdown-trigger.transitioning .selected-character-display {
-  animation: pulse 1s infinite;
-}
-
-.selected-character-display {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.dropdown-arrow {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  transition: transform 0.3s ease;
-}
-
-.dropdown-arrow.rotated {
-  transform: rotate(180deg);
-}
-
-.character-dropdown-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: rgba(20, 20, 40, 0.98); /* 提高不透明度确保可见性 */
-  border: 2px solid #667eea; /* 加粗边框提高可见性 */
-  border-top: none;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
-  backdrop-filter: blur(20px);
-  z-index: 99999; /* 大幅提高z-index值 */
-  max-height: 300px;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* 添加阴影提高层次感 */
-}
-
-.character-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.character-dropdown-item:last-child {
-  border-bottom: none;
-}
-
-.character-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(2px);
-}
-
-.character-dropdown-item.selected {
-  background: rgba(102, 126, 234, 0.2);
-  border-left: 3px solid #667eea;
-}
-
-.selected-indicator {
-  margin-left: auto;
-  color: #667eea;
-  font-weight: bold;
-  font-size: 1rem;
-}
-
-/* Dropdown Animation */
-.dropdown-slide-enter-active,
-.dropdown-slide-leave-active {
-  transition: all 0.3s ease;
-  transform-origin: top;
-}
-
-.dropdown-slide-enter-from {
-  opacity: 0;
-  transform: scaleY(0);
-}
-
-.dropdown-slide-leave-to {
-  opacity: 0;
-  transform: scaleY(0);
-}
-
-.character-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.character-card {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.character-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--character-color, #667eea);
-  transform: translateX(2px);
-}
-
-.character-card.selected {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: var(--character-color, #667eea);
-  box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
-}
-
-.character-avatar-small {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid var(--character-color, #667eea);
-  flex-shrink: 0;
-}
-
-.character-avatar-small img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.character-status-dot {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #333;
-  border: 2px solid #fff;
-}
-
-.character-status-dot.online {
-  background: #00ff88;
-  animation: pulse 2s infinite;
-}
-
-.character-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.character-name-small {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.character-role-small {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* History Section */
+/* 历史记录样式 */
 .history-section {
-  flex: 1;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.history-log {
   overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: #cbd5e1;
+  height: 100%;
+  padding-right: 0.5rem;
+}
+.history-log::-webkit-scrollbar { width: 4px; }
+.history-log::-webkit-scrollbar-thumb { background: #718096; border-radius: 2px; }
+
+.history-placeholder { color: #718096; text-align: center; padding-top: 2rem; }
+.history-entry { margin-bottom: 0.75rem; }
+
+.history-speaker { font-weight: 600; color: #90cdf4; }
+.history-speaker.player { color: var(--player-color); }
+.history-content.question { color: #f6e05e; font-style: italic; }
+
+.system-message {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.8rem;
+    padding: 0.5rem 0;
 }
 
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.history-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 0.5rem;
-}
-
-.history-question,
-.history-answer {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.history-question:last-child,
-.history-answer:last-child {
-  margin-bottom: 0;
-}
-
-.history-icon {
-  font-size: 0.8rem;
-  flex-shrink: 0;
-  margin-top: 0.1rem;
-}
-
-.history-text {
-  font-size: 0.75rem;
-  line-height: 1.3;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.history-question .history-text {
-  color: #667eea;
-  font-weight: 500;
-}
-
-.empty-history {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.empty-history p {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.85rem;
-}
-
-.empty-subtitle {
-  font-size: 0.75rem !important;
-  opacity: 0.7;
-}
-
-.recommended-questions {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 1rem;
-}
-
-.recommendations-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 0.75rem 0;
-}
-
-.recommendation-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.recommendation-button {
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 6px;
+/* 提问区样式 */
+.ask-section { flex-shrink: 0; }
+.character-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.tab-item {
   padding: 0.5rem 0.75rem;
-  color: #ffffff;
-  font-size: 0.75rem;
-  text-align: left;
+  background: var(--sidebar-border-color);
+  border: none;
+  color: var(--text-primary);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  line-height: 1.3;
+  font-size: 0.875rem;
+  transition: all 0.2s;
 }
+.tab-item:hover:not(:disabled) { background: #718096; }
+.tab-item:disabled { opacity: 0.5; cursor: not-allowed; }
+.tab-item.active { background: var(--accent-color); color: white; font-weight: 600; }
 
-.recommendation-button:hover {
-  background: rgba(102, 126, 234, 0.2);
-  border-color: #667eea;
-  transform: translateX(2px);
-}
-
-.question-categories-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.question-category-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+.custom-question-textarea {
+  width: 100%;
+  background: #1a202c;
+  border: 1px solid var(--sidebar-border-color);
+  border-radius: 6px;
   padding: 0.75rem;
-}
-
-.category-header-compact {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  color: white;
+  font-size: 0.875rem;
+  resize: none;
   margin-bottom: 0.75rem;
+  transition: border-color 0.2s;
 }
+.custom-question-textarea:focus { outline: none; border-color: var(--accent-color); }
 
-.category-icon-small {
-  font-size: 1rem;
-}
-
-.category-title-small {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0;
-}
-
-.question-list-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.question-button {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.ask-question-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--accent-color);
+  border: none;
   border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  color: #ffffff;
-  font-size: 0.75rem;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  line-height: 1.3;
-}
-
-.question-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #667eea;
-  transform: translateX(2px);
-}
-
-/* Custom Question Input Section */
-.custom-question-section {
-  flex-shrink: 0;
-}
-
-.custom-question-input-area {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.custom-question-textarea-sidebar {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: #ffffff;
-  font-size: 0.8rem;
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
-}
-
-.custom-question-textarea-sidebar:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-}
-
-.custom-question-textarea-sidebar::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.ask-question-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  border: none;
   color: white;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.ask-question-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.ask-question-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-icon {
-  font-size: 1rem;
-}
-
-.btn-text {
-  font-size: 0.8rem;
-}
-
-/* Interrogation Status Section */
-.interrogation-status-section {
-  flex-shrink: 0;
-}
-
-.current-interrogation-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.interrogation-target {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-}
-
-.target-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #667eea;
-}
-
-.target-info {
-  flex: 1;
-}
-
-.target-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-}
-
-.target-role {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 0.25rem;
-}
-
-.target-ai {
-  font-size: 0.65rem;
-  color: #667eea;
-  font-weight: 500;
-}
-
-.exit-interrogation-button {
-  background: linear-gradient(45deg, #ff6b6b, #ffd93d);
-  border: none;
-  color: #000;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.exit-interrogation-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-}
-
-/* Q&A Phase Styles */
-.sidebar-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  height: 100%;
-}
-
-.sidebar-placeholder {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.placeholder-content h3 {
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-  color: #a5b4fc;
-}
-
-.placeholder-content p {
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 2rem;
-}
-
-.progress-info {
-  width: 100%;
-  max-width: 200px;
-}
-
-.progress-text {
-  font-size: 0.8rem;
-  margin-bottom: 0.5rem;
-  color: #cbd5e1;
-}
-
-.progress-bar-mini {
-  width: 100%;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill-mini {
-  height: 100%;
-  background: linear-gradient(90deg, #00ff88, #00d4aa);
-  transition: width 0.3s ease;
-  border-radius: 4px;
-}
-
-.character-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.character-button {
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #cbd5e1;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  font-size: 0.85rem;
-}
-
-.character-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #a5b4fc;
-  transform: translateY(-1px);
-}
-
-.character-button.active {
-  background: #6366f1;
-  color: white;
-  border-color: #6366f1;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
-}
-
-.custom-question-textarea-qna {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: white;
-  font-family: inherit;
-  font-size: 0.9rem;
-  resize: vertical;
-  margin-bottom: 1rem;
-  min-height: 100px;
-}
-
-.custom-question-textarea-qna:focus {
-  outline: none;
-  border-color: #a5b4fc;
-  box-shadow: 0 0 10px rgba(165, 180, 252, 0.3);
-}
-
-.custom-question-textarea-qna::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.ask-question-button-qna {
-  width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
 }
-
-.ask-question-button-qna:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-}
-
-.ask-question-button-qna:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.error-message {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  font-size: 0.9rem;
-}
-
-/* Animations */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+.ask-question-button:hover:not(:disabled) { background: #434190; }
+.ask-question-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
@@ -1660,27 +689,13 @@ onUnmounted(() => {
     font-size: 0.9rem;
   }
 
-  .section-subtitle {
-    font-size: 0.75rem;
+  .character-tabs {
+    gap: 0.25rem;
   }
 
-  .character-card {
-    padding: 0.5rem;
-    gap: 0.5rem;
-  }
-
-  .character-avatar-small {
-    width: 32px;
-    height: 32px;
-  }
-
-  .question-button {
+  .tab-item {
     padding: 0.4rem 0.6rem;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
 }
-
-
-
-
 </style>
