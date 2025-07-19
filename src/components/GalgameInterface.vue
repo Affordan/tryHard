@@ -56,21 +56,6 @@
         :history="completedSceneHistory"
         @close="historyModalVisible = false"
       />
-
-      <!-- Ending Overlay -->
-      <div v-if="gamePhase === 'completed'" class="ending-overlay">
-        <div class="ending-content">
-          <h2>游戏结束</h2>
-          <div class="ending-text">
-            <p v-for="(paragraph, index) in finalEnding" :key="index">
-              {{ paragraph }}
-            </p>
-          </div>
-          <button @click="handleRestart" class="restart-button">
-            重新开始
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- Resizable Divider -->
@@ -150,6 +135,27 @@
         </button>
       </div>
     </div>
+
+    <!-- Final Ending Display -->
+    <div v-if="gamePhase === 'completed' && finalEnding" class="final-ending-overlay">
+      <div class="final-ending-container">
+        <div class="final-ending-header">
+          <h2 class="final-ending-title">最终真相</h2>
+          <div class="final-ending-divider"></div>
+        </div>
+        <div class="final-ending-content">
+          <p class="final-ending-text">{{ finalEnding }}</p>
+        </div>
+        <div class="final-ending-actions">
+          <button @click="goToHome" class="final-ending-button">
+            返回主页
+          </button>
+          <button @click="restartScript" class="final-ending-button secondary">
+            重新开始
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -166,7 +172,7 @@ import { useGameData, type CharacterData } from '@/composables/useGameData'
 import { useDialogueSystem } from '@/composables/useDialogueSystem'
 import { useSceneTransition } from '@/composables/useSceneTransition'
 // 引入最新的 useGame 和 getDisplayName
-import { useGame, getDisplayName } from '@/composables/useGame';
+import { useGame, getDisplayName, type HistoryEntry } from '@/composables/useGame';
 
 // 使用组合式函数
 const { characterDatabase, sceneBackgrounds } = useGameData()
@@ -195,8 +201,11 @@ const {
   currentSentenceIndex,
   currentAct, // 新增
   questionCount, // 新增
-  finalEnding, // 新增 finalEnding
-  startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry // 新增 advanceAct
+  playerCharacterId, // 确保解构了 playerCharacterId
+  finalEnding, // 新增最终结局状态
+  startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry, // 新增 advanceAct
+  incrementQuestionCount, // 引入新的计数函数
+  triggerFinalChoice // 新增最终选择函数
 } = useGame();
 
 // 历史记录类型定义
@@ -229,12 +238,25 @@ const canContinue = ref(false)
 // Q&A阶段状态
 const selectedCharacterId = ref<string | null>(null)
 
+// 新增：一个 ref 用于暂存已显示但尚未记录的问答对
+const pendingQA = ref<{ question: HistoryEntry; answer: HistoryEntry } | null>(null);
+
 // 可拖动侧边栏状态
 const sidebarWidth = ref(30) // 默认30%
 const isDragging = ref(false)
 
 // --- 本地组件状态 ---
 const historyLogRef = ref<HTMLElement | null>(null);
+
+// 新增：一个辅助函数，用于将暂存的问答记录到历史中
+const logPendingQA = () => {
+  if (pendingQA.value) {
+    addHistoryEntry(pendingQA.value.question);
+    addHistoryEntry(pendingQA.value.answer);
+    incrementQuestionCount(); // 只有在正式记录后才增加计数
+    pendingQA.value = null; // 清空暂存
+  }
+};
 
 // 计算属性
 // 当前显示的角色（优先显示审讯角色，否则显示剧情角色）
@@ -287,13 +309,15 @@ const processMonologueEntry = (entry: any) => {
 }
 
 /**
- * 处理 "继续" 按钮的点击事件
+ * (已更新) 处理 "继续" 按钮的点击事件
  */
 const handleContinue = () => {
   if (isTypingActive.value) {
     skipTypingEffect()
     return
   }
+
+  logPendingQA(); // 在处理独白前，先将可能存在的上一轮问答记录下来
 
   // 如果当前是系统初始消息，直接开始第一个独白
   if (currentDialogue.characterId === 'system' && currentDialogue.text.includes('欢迎来到剧本杀游戏')) {
@@ -304,6 +328,15 @@ const handleContinue = () => {
       processMonologueEntry(firstEntry)
     }
     return
+  }
+
+  // (这里的独白记录逻辑保持上一轮修改的样子)
+  if (gamePhase.value === 'monologue' && currentDialogue.characterId !== 'system') {
+    addHistoryEntry({
+      type: 'monologue',
+      characterId: currentDialogue.characterId,
+      content: currentDialogue.text,
+    });
   }
 
   const nextEntry = advanceMonologue()
@@ -329,33 +362,65 @@ const handleContinue = () => {
   }
 }
 
+// (已更新) 提问按钮的核心逻辑
 const handleAskQuestion = async () => {
-  if (!customQuestion.value.trim() || !selectedCharacterId.value) return;
-  await askQuestion(selectedCharacterId.value, customQuestion.value);
-  customQuestion.value = '';
+  if (!customQuestion.value.trim() || !selectedCharacterId.value || !playerCharacterId.value) return;
 
-  // 检查是否达到提问上限
-  if (questionCount.value >= 12) {
-    // 可以在这里自动触发进入下一幕，或者只是提示用户
-    console.log("已达到本幕提问上限，请点击'进入下一幕'。");
-    // 可选：自动推进
-    // handleAdvanceAct();
+  // 步骤 1: 将【上一轮】暂存的问答记录到历史中
+  logPendingQA();
+
+  // 步骤 2: 准备本次提问所需的数据
+  const currentQuestionText = customQuestion.value.trim();
+  const currentTargetId = selectedCharacterId.value;
+
+  customQuestion.value = ''; // 立即清空输入框
+
+  // 步骤 3: 调用API获取回答，这个函数现在只返回回答文本
+  const answerText = await askQuestion(currentTargetId, currentQuestionText);
+
+  // 步骤 4: 如果成功获取回答
+  if (answerText) {
+    // a. 在左侧对话框中用打字机效果显示回答
+    const characterDetails = characterDatabase[currentTargetId];
+    if (characterDetails) {
+      activeCharacter.value = characterDetails;
+    }
+    currentDialogue.text = answerText;
+    currentDialogue.characterId = currentTargetId;
+    startTypingEffect(answerText);
+    canContinue.value = false;
+
+    // b. 将【本次】的问答数据存入 pendingQA 中，等待下一次行动时再记录
+    pendingQA.value = {
+      question: {
+        type: 'question',
+        questionerId: playerCharacterId.value,
+        targetCharacterId: currentTargetId,
+        content: currentQuestionText,
+      },
+      answer: {
+        type: 'answer',
+        characterId: currentTargetId,
+        content: answerText,
+      },
+    };
+  } else {
+    // 如果提问失败，直接在历史记录中显示一条系统错误消息
+    addHistoryEntry({
+        type: 'system',
+        content: `向 ${currentTargetId} 的提问失败，请重试。`
+    });
   }
 };
 
-// 新增：处理进入下一幕的点击事件
+// (已更新) 处理进入下一幕的点击事件
 const handleAdvanceAct = async () => {
+  logPendingQA(); // 在推进幕次前，先将可能存在的上一轮问答记录下来
   await advanceAct();
-  // 如果不是最终结局，则开始新一幕的独白
+  // 推进幕次后，第一个独白会自动开始（如果存在）
   if (gamePhase.value === 'monologue') {
     handleContinue();
   }
-};
-
-// 新增：处理重新开始的逻辑
-const handleRestart = () => {
-  // 简单地重新加载页面或调用startGame
-  window.location.reload();
 };
 
 // 拖动相关方法
@@ -752,71 +817,108 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* 新增：结局展示面板样式 */
-.ending-overlay {
-  position: absolute;
+/* Final Ending Overlay */
+.final-ending-overlay {
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
-  z-index: 100;
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
-  justify-content: center;
   align-items: center;
-  animation: fadeIn 0.5s ease-out;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.ending-content {
-  background: var(--sidebar-section-bg);
-  padding: 2rem 3rem;
-  border-radius: 12px;
-  border: 2px solid var(--accent-color);
+.final-ending-container {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-radius: 20px;
+  padding: 3rem;
   max-width: 600px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  animation: finalEndingAppear 0.8s ease-out;
+}
+
+@keyframes finalEndingAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.final-ending-header {
   text-align: center;
-  color: var(--text-primary);
-}
-
-.ending-content h2 {
-  font-size: 2rem;
-  color: var(--accent-color);
-  margin-bottom: 1.5rem;
-}
-
-.ending-text {
-  font-size: 1rem;
-  line-height: 1.8;
-  text-align: left;
   margin-bottom: 2rem;
-  max-height: 50vh;
-  overflow-y: auto;
-  padding-right: 1rem;
 }
 
-.ending-text p {
-  margin-bottom: 1rem;
+.final-ending-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ecf0f1;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.restart-button {
-  width: 100%;
-  padding: 0.75rem;
-  background: var(--accent-color);
+.final-ending-divider {
+  width: 100px;
+  height: 3px;
+  background: linear-gradient(90deg, #e74c3c, #f39c12);
+  margin: 1rem auto;
+  border-radius: 2px;
+}
+
+.final-ending-content {
+  margin-bottom: 2.5rem;
+}
+
+.final-ending-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #bdc3c7;
+  text-align: justify;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.final-ending-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.final-ending-button {
+  padding: 0.8rem 2rem;
   border: none;
-  border-radius: 6px;
-  color: white;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
 }
-.restart-button:hover {
-  background: #434190;
+
+.final-ending-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.final-ending-button.secondary {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+}
+
+.final-ending-button.secondary:hover {
+  box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
 }
 
 /* Responsive Design */

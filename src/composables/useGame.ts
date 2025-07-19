@@ -37,14 +37,13 @@ export function useGame() {
   const error = ref<string | null>(null)
   const currentAct = ref(1) // 新增：当前幕次
   const questionCount = ref(0) // 新增：当前幕次的提问计数
-  const maxActs = ref(3) // 新增：最大幕次，假设为3
-
-  // 新增：存储最终结局的文本
-  const finalEnding = ref<string[]>([])
   
   // 独白相关状态
   const monologueProgress = ref({ current: 0, total: 0 })
   const interactionHistory = ref<HistoryEntry[]>([])
+
+  // 最终结局状态
+  const finalEnding = ref<string | null>(null)
 
   // 独白队列系统
   interface MonologueEntry {
@@ -88,8 +87,6 @@ export function useGame() {
     isLoading.value = true
     error.value = null
     gamePhase.value = 'initializing'
-    interactionHistory.value = [] // 清空历史记录
-    currentAct.value = 1
     
     try {
       // 创建游戏会话
@@ -219,24 +216,17 @@ export function useGame() {
   }
 
   /**
-   * 向指定角色提问
+   * (已更新) 向指定角色提问
+   * 新版本不再自动记录历史，而是仅返回AI的回答文本
    */
-  const askQuestion = async (targetCharacterId: string, question: string) => {
+  const askQuestion = async (targetCharacterId: string, question: string): Promise<string | null> => {
     if (!sessionId.value || !playerCharacterId.value) {
-      error.value = "游戏会话不存在"
-      return
+      error.value = "游戏会话不存在";
+      return null;
     }
 
-    isLoading.value = true
-    error.value = null
-    
-    // 添加问题到历史记录
-    interactionHistory.value.push({
-      type: 'question',
-      questionerId: playerCharacterId.value,
-      targetCharacterId: targetCharacterId,
-      content: question
-    })
+    isLoading.value = true;
+    error.value = null;
 
     try {
       const response = await axios.post(
@@ -247,95 +237,124 @@ export function useGame() {
           question: question,
           questioner_id: playerCharacterId.value
         }
-      )
+      );
 
       if (response.data.success) {
-        const answer = response.data.data.answer
-        // 添加回答到历史记录
-        interactionHistory.value.push({
-          type: 'answer',
-          characterId: targetCharacterId,
-          content: answer
-        })
-        questionCount.value++ // 提问成功后计数加一
-        console.log(`[Game] 收到回答: ${answer}`)
+        // 成功时，只返回回答的字符串
+        return response.data.data.answer;
       } else {
-        throw new Error(response.data.error || '提问失败')
+        throw new Error(response.data.error || '提问失败');
       }
     } catch (e: any) {
-      console.error('[Game] 提问时出错:', e)
-      error.value = e.message || '提问请求失败'
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
-   * (新增) 获取最终结局
-   */
-  const triggerFinalChoice = async () => {
-    if (!sessionId.value) return;
-    isLoading.value = true;
-    gamePhase.value = 'final_choice';
-    interactionHistory.value.push({ type: 'system', content: '--- 最终结局 ---' });
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
-        action_type: 'final_choice',
-        tell_truth: true // 根据您的API body，这里硬编码为true
-      });
-
-      if (response.data.success) {
-        finalEnding.value = response.data.data.ending;
-        gamePhase.value = 'completed';
-      } else {
-        throw new Error(response.data.error || '获取结局失败');
-      }
-    } catch (e: any) {
-      error.value = e.message;
+      console.error('[Game] 提问时出错:', e);
+      error.value = e.message || '提问请求失败';
+      return null; // 失败时返回 null
     } finally {
       isLoading.value = false;
     }
   };
 
   /**
-   * (修改) 推进幕次，增加最终幕判断
+   * (新增) 手动增加提问计数
+   * 因为记录被延迟了，所以计数也要延迟
    */
-  const advanceAct = async () => {
+  const incrementQuestionCount = () => {
+    questionCount.value++;
+  }
+
+  /**
+   * 获取最终结局
+   * 这个函数只负责发送 final_choice 请求
+   */
+  const triggerFinalChoice = async () => {
     if (!sessionId.value) return;
 
-    // 如果当前是第二幕，即将进入第三幕（最终幕）
-    if (currentAct.value === 2) {
-      await triggerFinalChoice();
-      return;
-    }
-
-    // 否则，正常推进到下一幕（例如从第一幕到第二幕）
-    isLoading.value = true;
     try {
       const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
-        action_type: 'advance_act'
+        action_type: 'final_choice',
+        tell_truth: true // 根据API文档，这里硬编码为true
       });
 
-      if (!response.data.success) throw new Error('推进幕次失败');
+      if (response.data.success) {
+        finalEnding.value = response.data.data.ending;
+        gamePhase.value = 'completed';
 
-      const { new_act, current_phase } = response.data.data;
-      currentAct.value = new_act;
-      gamePhase.value = current_phase;
+        // 添加最终结局到历史记录
+        interactionHistory.value.push({
+          type: 'system',
+          content: '--- 最终真相揭晓 ---'
+        });
 
-      interactionHistory.value.push({
-        type: 'system',
-        content: `--- 第 ${new_act} 幕开始 ---`
-      });
-
-      if (current_phase === 'monologue' && characters.value.size > 0) {
-        const characterIds = Array.from(characters.value.keys());
-        await fetchAndProcessAllMonologues(characterIds);
+        console.log('[Game] 成功获取最终结局');
+        isLoading.value = false; // 成功完成后关闭加载状态
+      } else {
+        throw new Error(response.data.error || '获取结局内容失败');
       }
     } catch (e: any) {
       error.value = e.message;
-    } finally {
+      // 如果获取结局失败，也要把加载状态关掉
       isLoading.value = false;
+    }
+  };
+
+  /**
+   * 推进到下一幕，增加最终幕判断和准备步骤
+   */
+  const advanceAct = async () => {
+    if (!sessionId.value) return;
+    isLoading.value = true; // 开始时就设置加载状态
+
+    try {
+      // 如果当前是第二幕，即将进入最终结局
+      if (currentAct.value === 2) {
+        interactionHistory.value.push({
+          type: 'system',
+          content: '--- 准备进入最终结局 ---'
+        });
+
+        // 步骤1: 先通知后端，我们要进入 final_choice 阶段
+        const phaseResponse = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
+          action_type: 'advance_phase',
+          target_phase: 'final_choice'
+        });
+
+        if (!phaseResponse.data.success) {
+          throw new Error('准备最终结局失败');
+        }
+
+        console.log('[Game] 成功进入 final_choice 阶段，即将获取结局。');
+        gamePhase.value = 'final_choice';
+
+        // 步骤2: 立即获取结局
+        await triggerFinalChoice();
+        // triggerFinalChoice 会在完成后设置 isLoading = false
+
+      } else {
+        // 否则，正常推进到下一幕（例如从第一幕到第二幕）
+        const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
+          action_type: 'advance_act'
+        });
+
+        if (!response.data.success) throw new Error('推进幕次失败');
+
+        const { new_act, current_phase } = response.data.data;
+        currentAct.value = new_act;
+        gamePhase.value = current_phase;
+
+        interactionHistory.value.push({
+          type: 'system',
+          content: `--- 第 ${new_act} 幕开始 ---`
+        });
+
+        if (current_phase === 'monologue' && characters.value.size > 0) {
+          const characterIds = Array.from(characters.value.keys());
+          await fetchAndProcessAllMonologues(characterIds);
+        }
+        isLoading.value = false; // 正常推进完成后，关闭加载
+      }
+    } catch (e: any) {
+      error.value = e.message;
+      isLoading.value = false; // 任何错误都应该关闭加载状态
     }
   };
 
@@ -351,6 +370,7 @@ export function useGame() {
     interactionHistory: readonly(interactionHistory),
     unifiedMonologueQueue: readonly(unifiedMonologueQueue),
     currentSentenceIndex: readonly(currentSentenceIndex),
+    finalEnding: readonly(finalEnding), // 新增最终结局状态
 
     // 计算属性：导出可审讯的角色列表 (已过滤掉玩家自己)
     interrogationTargets: computed(() =>
@@ -360,13 +380,14 @@ export function useGame() {
     // 新增返回
     currentAct: readonly(currentAct),
     questionCount: readonly(questionCount),
-    finalEnding: readonly(finalEnding),
 
     // 方法
     startGame,
     advanceMonologue,
-    askQuestion,
+    askQuestion, // 返回更新后的函数
     advanceAct, // 新增方法
-    addHistoryEntry
+    addHistoryEntry,
+    incrementQuestionCount, // 导出新函数
+    triggerFinalChoice // 新增最终选择函数
   }
 }
