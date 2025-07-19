@@ -65,8 +65,75 @@
 
     <!-- Right Panel: Interactive Interrogation Sidebar -->
     <div class="interrogation-sidebar" :style="{ width: sidebarWidth + '%' }">
-      <!-- Character Selection Area -->
-      <div class="sidebar-section character-selection-section enhanced-dropdown">
+
+      <!-- Q&A Phase Interface -->
+      <div v-if="gamePhase === 'qna'" class="sidebar-content">
+
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h3 class="section-title">🎯 审讯阶段</h3>
+            <p class="section-subtitle">选择角色并提出问题</p>
+          </div>
+
+          <div class="character-list">
+            <button
+              v-for="charId in availableCharacters"
+              :key="charId"
+              @click="selectedCharacterId = charId"
+              :class="['character-button', { active: selectedCharacterId === charId }]"
+            >
+              {{ getCharacterDisplayName(charId) }}
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h3 class="section-title">💬 输入问题</h3>
+            <p class="section-subtitle">向选中的角色提问</p>
+          </div>
+
+          <textarea
+            v-model="customQuestion"
+            placeholder="在这里输入你想问的问题..."
+            class="custom-question-textarea-qna"
+            rows="5"
+          ></textarea>
+
+          <button
+            @click="handleAskQuestion"
+            :disabled="!customQuestion.trim() || !selectedCharacterId || isLoading"
+            class="ask-question-button-qna"
+          >
+            {{ isLoading ? '思考中...' : '发送审讯' }}
+          </button>
+        </div>
+
+        <div v-if="error" class="error-message">
+          {{ error }}
+        </div>
+
+      </div>
+
+      <!-- Monologue Phase Placeholder -->
+      <div v-else class="sidebar-placeholder">
+        <div class="placeholder-content">
+          <h3>🎭 独白阶段</h3>
+          <p>请点击"继续"按钮，等待所有角色完成开场陈述。</p>
+          <div class="progress-info">
+            <div class="progress-text">进度: {{ currentSentenceIndex }}/{{ unifiedMonologueQueue.length }}</div>
+            <div class="progress-bar-mini">
+              <div
+                class="progress-fill-mini"
+                :style="{ width: unifiedMonologueQueue.length > 0 ? (currentSentenceIndex / unifiedMonologueQueue.length * 100) + '%' : '0%' }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character Selection Area (Original - now hidden during Q&A) -->
+      <div v-if="gamePhase !== 'qna'" class="sidebar-section character-selection-section enhanced-dropdown">
         <!-- 简化标题，让组件本身说明一切 -->
 
         <!-- Dropdown Character Selector -->
@@ -290,7 +357,12 @@ const {
   isLoading,
   error,
   startGame,
-  advanceToNextSentence
+  advanceToNextSentence,
+  // 新增：Q&A相关状态和方法
+  gamePhase,
+  availableCharacters,
+  latestAnswer,
+  askQuestion
 } = useGameLogic()
 
 // 历史记录类型定义
@@ -320,6 +392,9 @@ const customQuestion = ref('')
 // 新增：当前活跃角色状态
 const activeCharacter = ref<any>(null) // 当前说话的角色信息
 const canContinue = ref(false)
+
+// Q&A阶段状态
+const selectedCharacterId = ref<string | null>(null)
 
 // 下拉选择器状态
 const isCharacterDropdownOpen = ref(false)
@@ -364,10 +439,7 @@ const contextualQuestions = computed(() => {
   return getContextualQuestions(currentSceneId.value, activeCharacter.value?.characterId || '')
 })
 
-// 可用角色列表
-const availableCharacters = computed(() => {
-  return Object.values(characterDatabase)
-})
+// 注意：availableCharacters 现在从 useGameLogic 获取
 
 // 下拉选择器相关方法
 const toggleCharacterDropdown = () => {
@@ -484,6 +556,29 @@ const handleContinue = () => {
     // 在这里可以添加逻辑来显示提问UI
     // showUserInterface.value = true
   }
+}
+
+/**
+ * (新增) 处理点击"发送审讯"按钮的逻辑
+ */
+const handleAskQuestion = async () => {
+  if (!customQuestion.value.trim() || !selectedCharacterId.value) return
+
+  // 假设当前玩家ID为 "神探李"
+  const currentPlayerId = "神探李"
+
+  await askQuestion(selectedCharacterId.value, customQuestion.value, currentPlayerId)
+
+  // 清空输入框
+  customQuestion.value = ''
+}
+
+/**
+ * 获取角色显示名称
+ */
+const getCharacterDisplayName = (characterId: string): string => {
+  const characterData = characterDatabase[characterId]
+  return characterData ? characterData.characterName : characterId
 }
 
 // 拖动相关方法
@@ -678,6 +773,34 @@ const submitUserInput = () => {
   userInputText.value = ''
   showUserInterface.value = false
 }
+
+// (新增) 监听`latestAnswer`的变化，当有新回答时，更新左侧对话框
+watch(latestAnswer, (newAnswer) => {
+  if (newAnswer && selectedCharacterId.value) {
+    // 找到被提问角色的信息
+    const characterData = characterDatabase[selectedCharacterId.value]
+    if (characterData) {
+      activeCharacter.value = characterData
+    } else {
+      // 如果在数据库中找不到，使用默认数据
+      activeCharacter.value = {
+        characterId: selectedCharacterId.value,
+        characterName: selectedCharacterId.value,
+        characterImageURL: '/placeholder.svg',
+        llmName: 'AI Model',
+        characterRole: 'Unknown',
+        llmProvider: 'Unknown',
+        themeColor: '#667eea',
+        characterMood: 'neutral',
+        sceneId: 'default'
+      }
+    }
+
+    currentDialogue.text = newAnswer
+    currentDialogue.characterId = selectedCharacterId.value
+    startTypingEffect(newAnswer)
+  }
+})
 
 // 监听自动推进
 watch(() => isTypingActive.value, (newValue) => {
@@ -1345,6 +1468,150 @@ onUnmounted(() => {
 .exit-interrogation-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+/* Q&A Phase Styles */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.sidebar-placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.placeholder-content h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #a5b4fc;
+}
+
+.placeholder-content p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.progress-info {
+  width: 100%;
+  max-width: 200px;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  color: #cbd5e1;
+}
+
+.progress-bar-mini {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill-mini {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00d4aa);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.character-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.character-button {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: 0.85rem;
+}
+
+.character-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+}
+
+.character-button.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.custom-question-textarea-qna {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+  min-height: 100px;
+}
+
+.custom-question-textarea-qna:focus {
+  outline: none;
+  border-color: #a5b4fc;
+  box-shadow: 0 0 10px rgba(165, 180, 252, 0.3);
+}
+
+.custom-question-textarea-qna::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ask-question-button-qna {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ask-question-button-qna:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.ask-question-button-qna:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  font-size: 0.9rem;
 }
 
 /* Animations */

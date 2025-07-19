@@ -1,6 +1,6 @@
 // src/composables/useGameLogic.ts
 
-import { ref } from 'vue'
+import { ref, readonly } from 'vue' // 导入 readonly
 import axios from 'axios'
 
 // 定义单个发言条目的数据结构
@@ -8,6 +8,9 @@ export interface MonologueEntry {
   characterId: string;
   sentence: string;
 }
+
+// 新增：游戏阶段类型
+export type GamePhase = 'monologue' | 'qna' | 'completed';
 
 // API基础URL
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1/langchain-game'
@@ -24,6 +27,12 @@ export function useGameLogic() {
 
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  // 新增：管理当前游戏阶段，默认为独白阶段
+  const gamePhase = ref<GamePhase>('monologue')
+
+  // 新增：存储最新的问答结果
+  const latestAnswer = ref<string | null>(null)
 
   /**
    * 开始一个新游戏，并获取、处理所有独白
@@ -128,11 +137,56 @@ export function useGameLogic() {
       currentSentenceIndex.value++
       return nextEntry
     }
-    console.log('[Frontend] 所有角色独白已完成。')
+    // 当独白结束时，切换游戏阶段到QNA
+    console.log('[Frontend] 所有独白已完成，切换到QNA阶段。')
+    gamePhase.value = 'qna'
     return null
   }
 
+  /**
+   * (新增) 向指定角色提问
+   * @param targetCharacterId - 被提问角色的ID
+   * @param question - 问题内容
+   * @param questionerId - 提问玩家的ID (例如 "神探李")
+   */
+  const askQuestion = async (targetCharacterId: string, question: string, questionerId: string) => {
+    if (!sessionId.value) {
+      error.value = "游戏会话不存在"
+      return
+    }
+
+    isLoading.value = true
+    error.value = null
+    latestAnswer.value = null
+    console.log(`[Frontend] 玩家 [${questionerId}] 向 [${targetCharacterId}] 提问: ${question}`)
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/session/${sessionId.value}/action`,
+        {
+          action_type: 'qna',
+          character_id: targetCharacterId,
+          question: question,
+          questioner_id: questionerId
+        }
+      )
+
+      if (response.data.success) {
+        latestAnswer.value = response.data.data.answer
+        console.log(`[Frontend] 收到回答: ${latestAnswer.value}`)
+      } else {
+        throw new Error(response.data.error || '提问失败')
+      }
+    } catch (e: any) {
+      console.error('[Frontend] 提问时出错:', e)
+      error.value = e.message || '提问请求失败'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
+    // 现有返回
     sessionId,
     availableCharacters,
     unifiedMonologueQueue,
@@ -141,5 +195,9 @@ export function useGameLogic() {
     error,
     startGame,
     advanceToNextSentence,
+    // 新增返回
+    gamePhase: readonly(gamePhase), // 使用readonly确保阶段切换的单向性
+    latestAnswer: readonly(latestAnswer),
+    askQuestion
   }
 }

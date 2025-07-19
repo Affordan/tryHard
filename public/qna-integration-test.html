@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q&A集成测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            border: none;
+            color: #333;
+            padding: 12px 24px;
+            margin: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success { background: rgba(16, 185, 129, 0.8); }
+        .error { background: rgba(239, 68, 68, 0.8); }
+        .info { background: rgba(59, 130, 246, 0.8); }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .phase-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .phase-monologue {
+            background: rgba(255, 193, 7, 0.8);
+            color: #333;
+        }
+        .phase-qna {
+            background: rgba(40, 167, 69, 0.8);
+            color: white;
+        }
+        .qna-test-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .character-selector {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .character-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .character-btn.selected {
+            background: #6366f1;
+            border-color: #6366f1;
+        }
+        .question-input {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .question-textarea {
+            width: 100%;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .step {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            margin: 5px;
+            min-width: 200px;
+        }
+        .step.completed {
+            background: rgba(40, 167, 69, 0.3);
+            border: 2px solid #28a745;
+        }
+        .step.active {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Q&A集成测试</h1>
+        
+        <div class="test-section">
+            <h2>🚀 完整流程测试</h2>
+            <p>测试从25轮独白到Q&A阶段的完整转换流程</p>
+            
+            <div class="flow-steps">
+                <div class="step" id="step1">
+                    <h4>1. 开始游戏</h4>
+                    <p>创建会话</p>
+                </div>
+                <div class="step" id="step2">
+                    <h4>2. 独白阶段</h4>
+                    <p>25轮对话</p>
+                </div>
+                <div class="step" id="step3">
+                    <h4>3. Q&A阶段</h4>
+                    <p>自由提问</p>
+                </div>
+                <div class="step" id="step4">
+                    <h4>4. 测试完成</h4>
+                    <p>验证成功</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button onclick="testCompleteFlow()">🎯 完整流程测试</button>
+                <button onclick="testQNAOnly()" id="qnaOnlyBtn" disabled>💬 仅测试Q&A</button>
+            </div>
+            
+            <div class="phase-indicator" id="phaseIndicator">
+                <span class="phase-monologue">独白阶段</span>
+            </div>
+            
+            <div id="status"></div>
+            <pre id="response"></pre>
+        </div>
+
+        <div class="test-section">
+            <h3>💬 Q&A功能测试</h3>
+            <div class="qna-test-area">
+                <div class="character-selector">
+                    <h4>选择角色</h4>
+                    <div id="characterList">
+                        <!-- 动态生成角色按钮 -->
+                    </div>
+                </div>
+                <div class="question-input">
+                    <h4>输入问题</h4>
+                    <textarea id="questionText" class="question-textarea" placeholder="输入你想问的问题..."></textarea>
+                    <button onclick="askQuestion()" id="askBtn" disabled style="width: 100%; margin-top: 10px;">发送问题</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 API端点说明</h3>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px;">
+                <p><strong>Q&A API调用格式：</strong></p>
+                <pre style="background: rgba(0, 0, 0, 0.5); margin: 10px 0;">
+POST /api/v1/langchain-game/session/{session_id}/action
+{
+    "action_type": "qna",
+    "character_id": "朱丰翰",
+    "question": "老大，我丢了二十万，你最近刚买了新车，这事你怎么看？",
+    "questioner_id": "神探李"
+}</pre>
+                <p><strong>预期响应：</strong> 包含success状态、answer内容、角色信息等</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api/v1/langchain-game';
+        let gameState = {
+            sessionId: null,
+            availableCharacters: [],
+            selectedCharacter: null,
+            gamePhase: 'monologue'
+        };
+        
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        function showResponse(data) {
+            document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        }
+        
+        function updatePhaseIndicator(phase) {
+            const indicator = document.getElementById('phaseIndicator');
+            if (phase === 'qna') {
+                indicator.innerHTML = '<span class="phase-qna">Q&A阶段</span>';
+            } else {
+                indicator.innerHTML = '<span class="phase-monologue">独白阶段</span>';
+            }
+        }
+        
+        function updateStepStatus(stepNum, status) {
+            const step = document.getElementById(`step${stepNum}`);
+            step.className = `step ${status}`;
+        }
+        
+        function renderCharacterList(characters) {
+            const container = document.getElementById('characterList');
+            container.innerHTML = '';
+            
+            characters.forEach(charId => {
+                const btn = document.createElement('button');
+                btn.className = 'character-btn';
+                btn.textContent = charId;
+                btn.onclick = () => selectCharacter(charId);
+                container.appendChild(btn);
+            });
+        }
+        
+        function selectCharacter(charId) {
+            gameState.selectedCharacter = charId;
+            document.querySelectorAll('.character-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.textContent === charId);
+            });
+            document.getElementById('askBtn').disabled = false;
+        }
+        
+        async function testCompleteFlow() {
+            showStatus('🚀 开始完整流程测试...', 'info');
+            updateStepStatus(1, 'active');
+            
+            try {
+                // 步骤1: 开始游戏
+                const startResponse = await fetch(`${API_BASE_URL}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        script_id: 'test_qna_integration',
+                        user_id: null
+                    })
+                });
+                
+                if (!startResponse.ok) {
+                    throw new Error(`游戏开始失败: ${startResponse.status}`);
+                }
+                
+                const startData = await startResponse.json();
+                if (!startData.success) {
+                    throw new Error(startData.message || '游戏开始失败');
+                }
+                
+                gameState.sessionId = startData.data.session_id;
+                gameState.availableCharacters = startData.data.available_human_characters;
+                
+                updateStepStatus(1, 'completed');
+                updateStepStatus(2, 'active');
+                showStatus('✅ 游戏开始成功，模拟独白阶段...', 'success');
+                
+                // 模拟独白阶段完成
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                updateStepStatus(2, 'completed');
+                updateStepStatus(3, 'active');
+                
+                // 步骤3: 进入Q&A阶段
+                gameState.gamePhase = 'qna';
+                updatePhaseIndicator('qna');
+                renderCharacterList(gameState.availableCharacters);
+                document.getElementById('qnaOnlyBtn').disabled = false;
+                
+                showStatus('🎯 已进入Q&A阶段，可以开始提问！', 'success');
+                updateStepStatus(3, 'completed');
+                updateStepStatus(4, 'completed');
+                
+                showResponse({
+                    message: '完整流程测试成功',
+                    sessionId: gameState.sessionId,
+                    availableCharacters: gameState.availableCharacters,
+                    currentPhase: gameState.gamePhase
+                });
+                
+            } catch (error) {
+                showStatus(`❌ 流程测试失败: ${error.message}`, 'error');
+                showResponse({ error: error.message });
+                console.error('流程测试错误:', error);
+            }
+        }
+        
+        async function testQNAOnly() {
+            if (!gameState.sessionId) {
+                showStatus('❌ 请先运行完整流程测试！', 'error');
+                return;
+            }
+            
+            const testQuestions = [
+                { character: gameState.availableCharacters[0], question: "你能告诉我更多关于这个案件的细节吗？" },
+                { character: gameState.availableCharacters[1] || gameState.availableCharacters[0], question: "你当时在现场看到了什么？" }
+            ];
+            
+            for (const test of testQuestions) {
+                try {
+                    showStatus(`💬 测试向 ${test.character} 提问...`, 'info');
+                    
+                    const response = await fetch(`${API_BASE_URL}/session/${gameState.sessionId}/action`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action_type: 'qna',
+                            character_id: test.character,
+                            question: test.question,
+                            questioner_id: '神探李'
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Q&A请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showStatus(`✅ ${test.character} 回答成功！`, 'success');
+                        showResponse({
+                            question: test.question,
+                            character: test.character,
+                            answer: data.data.answer,
+                            fullResponse: data
+                        });
+                    } else {
+                        throw new Error(data.error || 'Q&A失败');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                } catch (error) {
+                    showStatus(`❌ Q&A测试失败: ${error.message}`, 'error');
+                    showResponse({ error: error.message, test: test });
+                    break;
+                }
+            }
+        }
+        
+        async function askQuestion() {
+            if (!gameState.selectedCharacter || !gameState.sessionId) {
+                showStatus('❌ 请选择角色并确保游戏已开始！', 'error');
+                return;
+            }
+            
+            const question = document.getElementById('questionText').value.trim();
+            if (!question) {
+                showStatus('❌ 请输入问题！', 'error');
+                return;
+            }
+            
+            try {
+                showStatus(`💬 向 ${gameState.selectedCharacter} 提问中...`, 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/session/${gameState.sessionId}/action`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action_type: 'qna',
+                        character_id: gameState.selectedCharacter,
+                        question: question,
+                        questioner_id: '神探李'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`✅ ${gameState.selectedCharacter} 已回答！`, 'success');
+                    showResponse({
+                        question: question,
+                        character: gameState.selectedCharacter,
+                        answer: data.data.answer,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    
+                    // 清空问题输入
+                    document.getElementById('questionText').value = '';
+                } else {
+                    throw new Error(data.error || '提问失败');
+                }
+                
+            } catch (error) {
+                showStatus(`❌ 提问失败: ${error.message}`, 'error');
+                showResponse({ error: error.message });
+                console.error('提问错误:', error);
+            }
+        }
+        
+        // 页面加载时的提示
+        window.addEventListener('load', () => {
+            showStatus('🎯 Q&A集成测试准备就绪！点击"完整流程测试"开始。', 'info');
+        });
+    </script>
+</body>
+</html>
