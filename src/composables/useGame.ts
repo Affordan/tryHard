@@ -37,6 +37,10 @@ export function useGame() {
   const error = ref<string | null>(null)
   const currentAct = ref(1) // 新增：当前幕次
   const questionCount = ref(0) // 新增：当前幕次的提问计数
+  const maxActs = ref(3) // 新增：最大幕次，假设为3
+
+  // 新增：存储最终结局的文本
+  const finalEnding = ref<string[]>([])
   
   // 独白相关状态
   const monologueProgress = ref({ current: 0, total: 0 })
@@ -84,6 +88,8 @@ export function useGame() {
     isLoading.value = true
     error.value = null
     gamePhase.value = 'initializing'
+    interactionHistory.value = [] // 清空历史记录
+    currentAct.value = 1
     
     try {
       // 创建游戏会话
@@ -102,7 +108,7 @@ export function useGame() {
       // 从返回的角色列表中自动选择第一个作为玩家角色
       const availableRoles = sessionData.available_human_characters;
       // 假设后端返回的列表就是完整的角色列表，我们自动选择第一个作为玩家
-      const chosenCharacterId = availableRoles[0]; 
+      const chosenCharacterId = availableRoles.includes("许苗苗") ? "许苗苗" : availableRoles[0]; 
 
       // 使用这个自动选择的角色来加入游戏和设置角色
       setupCharacters(availableRoles, chosenCharacterId);
@@ -265,20 +271,53 @@ export function useGame() {
   }
 
   /**
-   * 推进到下一幕
+   * (新增) 获取最终结局
+   */
+  const triggerFinalChoice = async () => {
+    if (!sessionId.value) return;
+    isLoading.value = true;
+    gamePhase.value = 'final_choice';
+    interactionHistory.value.push({ type: 'system', content: '--- 最终结局 ---' });
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
+        action_type: 'final_choice',
+        tell_truth: true // 根据您的API body，这里硬编码为true
+      });
+
+      if (response.data.success) {
+        finalEnding.value = response.data.data.ending;
+        gamePhase.value = 'completed';
+      } else {
+        throw new Error(response.data.error || '获取结局失败');
+      }
+    } catch (e: any) {
+      error.value = e.message;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  /**
+   * (修改) 推进幕次，增加最终幕判断
    */
   const advanceAct = async () => {
     if (!sessionId.value) return;
-    isLoading.value = true
+
+    // 如果当前是第二幕，即将进入第三幕（最终幕）
+    if (currentAct.value === 2) {
+      await triggerFinalChoice();
+      return;
+    }
+
+    // 否则，正常推进到下一幕（例如从第一幕到第二幕）
+    isLoading.value = true;
     try {
-      // 1. 调用后端API推进幕次
       const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
         action_type: 'advance_act'
       });
 
-      if (!response.data.success) {
-        throw new Error('推进幕次失败');
-      }
+      if (!response.data.success) throw new Error('推进幕次失败');
 
       const { new_act, current_phase } = response.data.data;
       currentAct.value = new_act;
@@ -289,7 +328,6 @@ export function useGame() {
         content: `--- 第 ${new_act} 幕开始 ---`
       });
 
-      // 2. 重新获取新一幕的独白
       if (current_phase === 'monologue' && characters.value.size > 0) {
         const characterIds = Array.from(characters.value.keys());
         await fetchAndProcessAllMonologues(characterIds);
@@ -322,6 +360,7 @@ export function useGame() {
     // 新增返回
     currentAct: readonly(currentAct),
     questionCount: readonly(questionCount),
+    finalEnding: readonly(finalEnding),
 
     // 方法
     startGame,

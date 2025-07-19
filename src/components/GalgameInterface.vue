@@ -56,6 +56,21 @@
         :history="completedSceneHistory"
         @close="historyModalVisible = false"
       />
+
+      <!-- Ending Overlay -->
+      <div v-if="gamePhase === 'completed'" class="ending-overlay">
+        <div class="ending-content">
+          <h2>游戏结束</h2>
+          <div class="ending-text">
+            <p v-for="(paragraph, index) in finalEnding" :key="index">
+              {{ paragraph }}
+            </p>
+          </div>
+          <button @click="handleRestart" class="restart-button">
+            重新开始
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Resizable Divider -->
@@ -104,7 +119,7 @@
               :disabled="isLoading || gamePhase !== 'qna'"
               class="next-act-button"
             >
-              进入下一幕
+              {{ currentAct === 2 ? '查看最终结局' : '进入下一幕' }}
             </button>
           </div>
         </div>
@@ -180,6 +195,7 @@ const {
   currentSentenceIndex,
   currentAct, // 新增
   questionCount, // 新增
+  finalEnding, // 新增 finalEnding
   startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry // 新增 advanceAct
 } = useGame();
 
@@ -330,8 +346,16 @@ const handleAskQuestion = async () => {
 // 新增：处理进入下一幕的点击事件
 const handleAdvanceAct = async () => {
   await advanceAct();
-  // 推进幕次后，第一个独白会自动开始（如果存在）
-  handleContinue();
+  // 如果不是最终结局，则开始新一幕的独白
+  if (gamePhase.value === 'monologue') {
+    handleContinue();
+  }
+};
+
+// 新增：处理重新开始的逻辑
+const handleRestart = () => {
+  // 简单地重新加载页面或调用startGame
+  window.location.reload();
 };
 
 // 拖动相关方法
@@ -726,6 +750,73 @@ onUnmounted(() => {
 .next-act-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 新增：结局展示面板样式 */
+.ending-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ending-content {
+  background: var(--sidebar-section-bg);
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  border: 2px solid var(--accent-color);
+  max-width: 600px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.ending-content h2 {
+  font-size: 2rem;
+  color: var(--accent-color);
+  margin-bottom: 1.5rem;
+}
+
+.ending-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  text-align: left;
+  margin-bottom: 2rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 1rem;
+}
+
+.ending-text p {
+  margin-bottom: 1rem;
+}
+
+.restart-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--accent-color);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.restart-button:hover {
+  background: #434190;
 }
 
 /* Responsive Design */
