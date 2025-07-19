@@ -50,11 +50,25 @@
         @show-settings="showInterfaceSettings"
       />
 
+      <!-- 临时测试按钮 -->
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 100;">
+        <button @click="testEndingDisplay" style="padding: 8px 16px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          测试结局显示
+        </button>
+      </div>
+
       <!-- History Modal -->
       <HistoryModal
         :visible="historyModalVisible"
         :history="completedSceneHistory"
         @close="historyModalVisible = false"
+      />
+
+      <!-- Ending Scene Component -->
+      <EndingScene
+        :visible="gamePhase === 'completed'"
+        :ending="finalEnding"
+        @close="handleRestart"
       />
     </div>
 
@@ -136,26 +150,7 @@
       </div>
     </div>
 
-    <!-- Final Ending Display -->
-    <div v-if="gamePhase === 'completed' && finalEnding" class="final-ending-overlay">
-      <div class="final-ending-container">
-        <div class="final-ending-header">
-          <h2 class="final-ending-title">最终真相</h2>
-          <div class="final-ending-divider"></div>
-        </div>
-        <div class="final-ending-content">
-          <p class="final-ending-text">{{ finalEnding }}</p>
-        </div>
-        <div class="final-ending-actions">
-          <button @click="goToHome" class="final-ending-button">
-            返回主页
-          </button>
-          <button @click="restartScript" class="final-ending-button secondary">
-            重新开始
-          </button>
-        </div>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -168,6 +163,8 @@ import DialogueSystem from './DialogueSystem.vue'
 import SceneTransition from './SceneTransition.vue'
 import ControlPanel from './ControlPanel.vue'
 import HistoryModal from './HistoryModal.vue'
+// (新增) 导入新的结局组件
+import EndingScene from './EndingScene.vue'
 import { useGameData, type CharacterData } from '@/composables/useGameData'
 import { useDialogueSystem } from '@/composables/useDialogueSystem'
 import { useSceneTransition } from '@/composables/useSceneTransition'
@@ -205,7 +202,7 @@ const {
   finalEnding, // 新增最终结局状态
   startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry, // 新增 advanceAct
   incrementQuestionCount, // 引入新的计数函数
-  triggerFinalChoice // 新增最终选择函数
+  testEndingDisplay // 临时测试函数
 } = useGame();
 
 // 历史记录类型定义
@@ -491,6 +488,12 @@ const submitUserInput = () => {
 const goToHome = () => {
   router.push('/')
 }
+
+// 处理结局组件的重启请求
+const handleRestart = () => {
+  // 这里可以定义返回主页或重新加载的逻辑
+  window.location.reload();
+};
 
 // 获取路由参数中的剧本ID
 const scriptId = computed(() => route.params.scriptId as string)
@@ -817,109 +820,7 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* Final Ending Overlay */
-.final-ending-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-}
 
-.final-ending-container {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-  border-radius: 20px;
-  padding: 3rem;
-  max-width: 600px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  animation: finalEndingAppear 0.8s ease-out;
-}
-
-@keyframes finalEndingAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateY(50px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.final-ending-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.final-ending-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #ecf0f1;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.final-ending-divider {
-  width: 100px;
-  height: 3px;
-  background: linear-gradient(90deg, #e74c3c, #f39c12);
-  margin: 1rem auto;
-  border-radius: 2px;
-}
-
-.final-ending-content {
-  margin-bottom: 2.5rem;
-}
-
-.final-ending-text {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #bdc3c7;
-  text-align: justify;
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.final-ending-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.final-ending-button {
-  padding: 0.8rem 2rem;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-}
-
-.final-ending-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-}
-
-.final-ending-button.secondary {
-  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-  box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
-}
-
-.final-ending-button.secondary:hover {
-  box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
-}
 
 /* Responsive Design */
 @media (max-width: 1024px) {

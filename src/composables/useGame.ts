@@ -43,7 +43,19 @@ export function useGame() {
   const interactionHistory = ref<HistoryEntry[]>([])
 
   // 最终结局状态
-  const finalEnding = ref<string | null>(null)
+  const finalEnding = ref<string[]>([])
+
+  // 这是从API响应中提取的结局数据，我们直接放在前端
+  const MOCK_ENDING_DATA = [
+    "（听完 \"孩子们\" 的话，点了点头，咳嗽两声）",
+    "\"丰翰啊，明儿跟你弟说说，别总瞎折腾，踏踏实实找个活儿干……\"",
+    "（转向 \"玲玲\"，声音软下来）",
+    "\"丫头别总往外跑，家里有热饭吃……\"",
+    "（又看向 \"苗苗\"，拍了拍床沿）",
+    "\"你跟丰震好好的，比啥都强……\"",
+    "（说着说着打了个哈欠，往被窝里缩了缩）",
+    "\"我睡会儿，醒了你们还在不？\""
+  ];
 
   // 独白队列系统
   interface MonologueEntry {
@@ -263,100 +275,107 @@ export function useGame() {
   }
 
   /**
-   * 获取最终结局
-   * 这个函数只负责发送 final_choice 请求
+   * (已更新) 不再调用API，而是直接设置结局
    */
+  const triggerFinalChoice = () => {
+    console.log('[Game] 正在触发前端定义的最终结局...');
+
+    // 将预设的结局数据赋值给状态
+    finalEnding.value = MOCK_ENDING_DATA;
+
+    // 更新游戏阶段为 'completed'，这将触发UI显示结局
+    gamePhase.value = 'completed';
+
+    interactionHistory.value.push({ type: 'system', content: '--- 游戏结束 ---' });
+    isLoading.value = false;
+  };
+
+  // 注释掉的原始API调用版本，保留以备后续恢复
+  /*
   const triggerFinalChoice = async () => {
     if (!sessionId.value) return;
+
+    console.log('[Debug] triggerFinalChoice 函数开始执行...'); // 日志1：确认函数被调用
 
     try {
       const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
         action_type: 'final_choice',
-        tell_truth: true // 根据API文档，这里硬编码为true
+        tell_truth: true
       });
 
+      console.log('[Debug] 收到后端响应:', response.data); // 日志2：查看完整的后端返回数据
+
       if (response.data.success) {
+        console.log('[Debug] 响应成功，准备更新状态...'); // 日志3：确认进入了 success 分支
+
         finalEnding.value = response.data.data.ending;
+        console.log('[Debug] finalEnding 状态已更新为:', finalEnding.value); // 日志4：检查结局数据是否被赋值
+
         gamePhase.value = 'completed';
+        console.log('[Debug] gamePhase 状态已更新为: completed'); // 日志5：检查游戏阶段是否被更新
 
-        // 添加最终结局到历史记录
-        interactionHistory.value.push({
-          type: 'system',
-          content: '--- 最终真相揭晓 ---'
-        });
-
-        console.log('[Game] 成功获取最终结局');
-        isLoading.value = false; // 成功完成后关闭加载状态
       } else {
+        console.error('[Debug] 后端返回 success: false', response.data.error);
         throw new Error(response.data.error || '获取结局内容失败');
       }
     } catch (e: any) {
       error.value = e.message;
-      // 如果获取结局失败，也要把加载状态关掉
+      console.error('[Debug] 在 triggerFinalChoice 中捕获到错误:', e); // 日志6：捕获任何可能的异常
+    } finally {
+      isLoading.value = false;
+      console.log('[Debug] triggerFinalChoice 函数执行完毕。'); // 日志7：确认函数执行完毕
+    }
+  };
+  */
+  /**
+   * (已更新) 推进幕次，最终幕直接触发前端结局
+   */
+  const advanceAct = async () => {
+    if (!sessionId.value) return;
+
+    // 如果当前是第二幕，即将进入第三幕（最终幕）
+    if (currentAct.value >= 2) {
+      triggerFinalChoice(); // 直接触发前端结局，不再调用API
+      return;
+    }
+
+    // 否则，正常推进到下一幕（例如从第一幕到第二幕）
+    isLoading.value = true;
+    try {
+      const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
+        action_type: 'advance_act'
+      });
+
+      if (!response.data.success) {
+        throw new Error('推进幕次失败');
+      }
+
+      const { new_act, current_phase } = response.data.data;
+      currentAct.value = new_act;
+      gamePhase.value = current_phase;
+
+      interactionHistory.value.push({
+        type: 'system',
+        content: `--- 第 ${new_act} 幕开始 ---`
+      });
+
+      if (current_phase === 'monologue' && characters.value.size > 0) {
+        const characterIds = Array.from(characters.value.keys());
+        await fetchAndProcessAllMonologues(characterIds);
+      }
+    } catch (e: any) {
+      error.value = e.message;
+    } finally {
       isLoading.value = false;
     }
   };
 
-  /**
-   * 推进到下一幕，增加最终幕判断和准备步骤
-   */
-  const advanceAct = async () => {
-    if (!sessionId.value) return;
-    isLoading.value = true; // 开始时就设置加载状态
-
-    try {
-      // 如果当前是第二幕，即将进入最终结局
-      if (currentAct.value === 2) {
-        interactionHistory.value.push({
-          type: 'system',
-          content: '--- 准备进入最终结局 ---'
-        });
-
-        // 步骤1: 先通知后端，我们要进入 final_choice 阶段
-        const phaseResponse = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
-          action_type: 'advance_phase',
-          target_phase: 'final_choice'
-        });
-
-        if (!phaseResponse.data.success) {
-          throw new Error('准备最终结局失败');
-        }
-
-        console.log('[Game] 成功进入 final_choice 阶段，即将获取结局。');
-        gamePhase.value = 'final_choice';
-
-        // 步骤2: 立即获取结局
-        await triggerFinalChoice();
-        // triggerFinalChoice 会在完成后设置 isLoading = false
-
-      } else {
-        // 否则，正常推进到下一幕（例如从第一幕到第二幕）
-        const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
-          action_type: 'advance_act'
-        });
-
-        if (!response.data.success) throw new Error('推进幕次失败');
-
-        const { new_act, current_phase } = response.data.data;
-        currentAct.value = new_act;
-        gamePhase.value = current_phase;
-
-        interactionHistory.value.push({
-          type: 'system',
-          content: `--- 第 ${new_act} 幕开始 ---`
-        });
-
-        if (current_phase === 'monologue' && characters.value.size > 0) {
-          const characterIds = Array.from(characters.value.keys());
-          await fetchAndProcessAllMonologues(characterIds);
-        }
-        isLoading.value = false; // 正常推进完成后，关闭加载
-      }
-    } catch (e: any) {
-      error.value = e.message;
-      isLoading.value = false; // 任何错误都应该关闭加载状态
-    }
+  // 临时测试函数 - 用于测试结局显示
+  const testEndingDisplay = () => {
+    console.log('[Test] 触发结局显示测试...');
+    triggerFinalChoice();
   };
+
 
   return {
     // 状态
@@ -388,6 +407,7 @@ export function useGame() {
     advanceAct, // 新增方法
     addHistoryEntry,
     incrementQuestionCount, // 导出新函数
-    triggerFinalChoice // 新增最终选择函数
+    triggerFinalChoice, // 新增最终选择函数
+    testEndingDisplay // 临时测试函数
   }
 }
