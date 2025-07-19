@@ -308,27 +308,16 @@ const processMonologueEntry = (entry: any) => {
 /**
  * (已更新) 处理 "继续" 按钮的点击事件
  */
-const handleContinue = () => {
+ const handleContinue = () => {
+  // 如果打字机正在播放，点击则立即完成显示
   if (isTypingActive.value) {
-    skipTypingEffect()
-    return
+    skipTypingEffect();
+    return;
   }
 
-  logPendingQA(); // 在处理独白前，先将可能存在的上一轮问答记录下来
-
-  // 如果当前是系统初始消息，直接开始第一个独白
-  if (currentDialogue.characterId === 'system' && currentDialogue.text.includes('欢迎来到剧本杀游戏')) {
-    // 开始第一个独白
-    const firstEntry = advanceMonologue()
-    if (firstEntry) {
-      // 处理第一个独白条目
-      processMonologueEntry(firstEntry)
-    }
-    return
-  }
-
-  // (这里的独白记录逻辑保持上一轮修改的样子)
-  if (gamePhase.value === 'monologue' && currentDialogue.characterId !== 'system') {
+  // 1. 记录【上一句】已经显示完成的独白
+  //    通过检查确保它是一个真正的角色独白，而不是系统提示
+  if (gamePhase.value === 'monologue' && currentDialogue.characterId && currentDialogue.characterId !== 'system') {
     addHistoryEntry({
       type: 'monologue',
       characterId: currentDialogue.characterId,
@@ -336,28 +325,43 @@ const handleContinue = () => {
     });
   }
 
-  const nextEntry = advanceMonologue()
+  // 2. 获取【下一句】独白来进行显示
+  const nextEntry = advanceMonologue();
 
+  // 3. 如果还有下一句独白
   if (nextEntry) {
-    processMonologueEntry(nextEntry)
-  } else {
-    // 所有独白结束，进入提问环节
-    console.log("所有角色独白已完成，进入提问环节。")
+    // 准备显示下一句独白，但【不】在这里记录它
+    const characterData = characterDatabase[nextEntry.characterId];
+    if (characterData) {
+      activeCharacter.value = characterData;
+    }
 
-    // 🔥 添加系统消息到历史记录，表示独白阶段结束
+    currentDialogue.text = nextEntry.sentence;
+    currentDialogue.characterId = nextEntry.characterId;
+    startTypingEffect(nextEntry.sentence);
+    canContinue.value = true;
+
+  } else {
+    // 4. 如果所有独白都已结束
+    console.log("所有角色独白已完成，进入提问环节。");
+    
+    // 添加一条系统消息到历史记录，标记阶段转换
     addHistoryEntry({
       type: 'system',
       content: '所有角色独白完成，现在可以开始提问了！'
-    })
-
-    activeCharacter.value = null // 清空当前角色
-    currentDialogue.text = "第一幕：所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。"
-    startTypingEffect(currentDialogue.text)
-
-    // 禁用"继续"按钮，因为独白阶段结束了
-    canContinue.value = false
+    });
+    
+    // 清理对话框并显示提示信息
+    activeCharacter.value = null; 
+    currentDialogue.text = "第一幕：所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。";
+    currentDialogue.characterId = 'system';
+    startTypingEffect(currentDialogue.text);
+    
+    // 在Q&A阶段，禁用“继续”按钮
+    canContinue.value = false;
   }
-}
+};
+
 
 // (已更新) 提问按钮的核心逻辑
 const handleAskQuestion = async () => {

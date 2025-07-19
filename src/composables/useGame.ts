@@ -204,20 +204,26 @@ export function useGame() {
   /**
    * 推进独白阶段 - 返回下一个要显示的独白条目
    */
-  const advanceMonologue = (): MonologueEntry | null => {
-    if (currentSentenceIndex.value < unifiedMonologueQueue.value.length) {
-      const nextEntry = unifiedMonologueQueue.value[currentSentenceIndex.value]
-      console.log(`[Game] 推进幕次, 第 ${currentSentenceIndex.value + 1} 句, 发言角色: ${nextEntry.characterId}`)
-      currentSentenceIndex.value++
-      monologueProgress.value.current = currentSentenceIndex.value
-      return nextEntry
-    }
-    // 当独白结束时，切换游戏阶段到QNA
-    console.log('[Game] 所有独白已完成，切换到QNA阶段。')
-    gamePhase.value = 'qna'
-    questionCount.value = 0 // 进入QNA时重置提问计数
-    return null
+  /**
+ * (已更新) 推进独白
+ * 这个函数现在只负责从队列中获取下一条句子并推进索引，不处理任何历史记录。
+ */
+const advanceMonologue = (): MonologueEntry | null => {
+  if (currentSentenceIndex.value < unifiedMonologueQueue.value.length) {
+    const nextEntry = unifiedMonologueQueue.value[currentSentenceIndex.value];
+    
+    // 关键：只推进索引，不在这里调用 addHistoryEntry
+    currentSentenceIndex.value++; 
+    monologueProgress.value.current = currentSentenceIndex.value;
+    
+    return nextEntry;
   }
+  
+  // 独白结束，切换到QNA阶段
+  gamePhase.value = 'qna';
+  questionCount.value = 0; // 进入QNA时重置提问计数
+  return null;
+};
 
   /**
    * 添加历史记录条目 - 用于交互式历史记录更新
