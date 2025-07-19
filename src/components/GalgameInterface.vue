@@ -17,16 +17,18 @@
 
       <!-- Dialogue System -->
       <DialogueSystem
-        :is-ai-processing="isLoading" :current-dialogue="currentDialogue"
+        :is-ai-processing="isLoading"
+        :current-dialogue="currentDialogue"
         :active-character="activeCharacter"
         :displayed-text="displayedDialogueText"
         :is-typing="isTypingActive"
         :can-continue="canContinue"
-        :current-scene-index="currentMonologueIndex" :total-scenes="monologueQueue.length" :processing-progress="processingProgress"
+        :current-scene-index="currentSentenceIndex" :total-scenes="unifiedMonologueQueue.length" :processing-progress="0"
         :show-user-interface="showUserInterface"
         :user-input="userInputText"
         @skip-typing="skipTypingEffect"
-        @continue-scene="handleContinue" @submit-input="submitUserInput"
+        @continue-scene="handleContinue"
+        @submit-input="submitUserInput"
         @update-input="userInputText = $event"
       />
 
@@ -241,7 +243,7 @@ import { useSceneTransition } from '@/composables/useSceneTransition'
 import { useAISelection } from '@/composables/useAISelection'
 import { useQuestionTemplates } from '@/composables/useQuestionTemplates'
 import { useInteractionSystem } from '@/composables/useInteractionSystem'
-import { useGameLogic, type Monologue } from '@/composables/useGameLogic' // 引入新的组合式函数
+import { useGameLogic, type MonologueEntry } from '@/composables/useGameLogic' // 引入更新后的组合式函数
 
 // 使用组合式函数
 const { characterDatabase, sceneBackgrounds, scriptData } = useGameData()
@@ -280,15 +282,15 @@ const {
   processUserQuestion
 } = useInteractionSystem()
 
-// 新增：使用我们的核心游戏逻辑
+// 使用更新后的核心游戏逻辑
 const {
   sessionId,
-  monologueQueue,
-  currentMonologueIndex,
+  unifiedMonologueQueue,
+  currentSentenceIndex,
   isLoading,
   error,
   startGame,
-  advanceToNextMonologue
+  advanceToNextSentence
 } = useGameLogic()
 
 // 历史记录类型定义
@@ -440,18 +442,18 @@ const handleContinue = () => {
     return
   }
 
-  const nextMonologue = advanceToNextMonologue()
+  const nextEntry = advanceToNextSentence()
 
-  if (nextMonologue) {
-    // 找到角色的详细数据（为了显示头像等）
-    const characterData = characterDatabase[nextMonologue.characterId]
+  if (nextEntry) {
+    // 根据 characterId 找到角色的详细数据以显示头像等
+    const characterData = characterDatabase[nextEntry.characterId]
     if (characterData) {
       activeCharacter.value = characterData
     } else {
       // 如果在数据库中找不到，使用默认数据
       activeCharacter.value = {
-        characterId: nextMonologue.characterId,
-        characterName: nextMonologue.characterId,
+        characterId: nextEntry.characterId,
+        characterName: nextEntry.characterId,
         characterImageURL: '/placeholder.svg',
         llmName: 'AI Model',
         characterRole: 'Unknown',
@@ -462,22 +464,25 @@ const handleContinue = () => {
       }
     }
 
-    // 将多句话合并成一段话，用换行符连接
-    const fullMonologueText = nextMonologue.sentences.join('\n\n')
+    // 更新对话内容为当前句子
+    currentDialogue.text = nextEntry.sentence
+    currentDialogue.characterId = nextEntry.characterId
+    startTypingEffect(nextEntry.sentence)
 
-    currentDialogue.text = fullMonologueText
-    currentDialogue.characterId = nextMonologue.characterId
-    startTypingEffect(fullMonologueText)
-
-    // 独白进行中，可以继续
+    // 只要队列里还有话，就可以继续
     canContinue.value = true
   } else {
-    // 所有独白结束
-    console.log("所有独白已结束，可以进入下一阶段，例如QNA")
-    currentDialogue.text = "所有角色介绍完毕，现在可以开始自由提问了。"
+    // 所有独白结束，进入提问环节
+    console.log("所有角色独白已完成，进入提问环节。")
+    activeCharacter.value = null // 清空当前角色
+    currentDialogue.text = "第一幕：所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。"
     startTypingEffect(currentDialogue.text)
-    // 独白结束，禁用继续按钮
+
+    // 禁用"继续"按钮，因为独白阶段结束了
     canContinue.value = false
+
+    // 在这里可以添加逻辑来显示提问UI
+    // showUserInterface.value = true
   }
 }
 
@@ -736,8 +741,8 @@ onMounted(async () => {
   const scriptId = route.params.scriptId as string
   if (scriptId) {
     await startGame(scriptId)
-    // 游戏开始后，自动触发第一个角色的独白
-    if (monologueQueue.value.length > 0) {
+    // 游戏数据加载完毕后，自动触发第一句话
+    if (unifiedMonologueQueue.value.length > 0) {
       handleContinue()
     }
   }

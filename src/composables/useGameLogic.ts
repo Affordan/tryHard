@@ -3,32 +3,31 @@
 import { ref } from 'vue'
 import axios from 'axios'
 
-// 定义独白的数据结构
-export interface Monologue {
+// 定义单个发言条目的数据结构
+export interface MonologueEntry {
   characterId: string;
-  sentences: string[];
+  sentence: string;
 }
 
 // API基础URL
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1/langchain-game'
 
 export function useGameLogic() {
-  // 游戏会话ID
   const sessionId = ref<string | null>(null)
-  // 可供玩家选择的角色列表
   const availableCharacters = ref<string[]>([])
-  // 存储所有角色独白的队列
-  const monologueQueue = ref<Monologue[]>([])
-  // 当前进行到哪个角色的独白
-  const currentMonologueIndex = ref(0)
-  // 游戏是否正在加载（例如，获取所有独白时）
+
+  // 新增：统一的独白总队列，包含所有角色的所有句子
+  const unifiedMonologueQueue = ref<MonologueEntry[]>([])
+
+  // 当前在总队列中的索引
+  const currentSentenceIndex = ref(0)
+
   const isLoading = ref(false)
-  // 存储错误信息
   const error = ref<string | null>(null)
 
   /**
-   * 开始一个新游戏
-   * @param scriptId - 要开始的剧本ID
+   * 开始一个新游戏，并获取、处理所有独白
+   * @param scriptId - 剧本ID
    */
   const startGame = async (scriptId: string) => {
     isLoading.value = true
@@ -36,21 +35,20 @@ export function useGameLogic() {
     console.log(`[Frontend] 准备开始新游戏，剧本ID: ${scriptId}`)
 
     try {
-      // 1. 调用 "Start New Game" API
       const startResponse = await axios.post(`${API_BASE_URL}/start`, {
         script_id: scriptId,
-        user_id: null // 根据您的示例，这里可以为null
+        user_id: null
       })
 
       if (startResponse.data.success) {
-        // 保存 session_id 和可用的角色列表
         sessionId.value = startResponse.data.data.session_id
+        // 注意：这里的角色列表是后端返回的可选角色，实际独白可能需要所有角色
+        // 我们假设后端返回的角色列表就是我们需要获取独白的角色顺序
         availableCharacters.value = startResponse.data.data.available_human_characters
         console.log(`[Frontend] 游戏创建成功, Session ID: ${sessionId.value}`)
-        console.log(`[Frontend] 可用角色:`, availableCharacters.value)
 
-        // 2. 预加载所有角色的独白
-        await fetchAllMonologues()
+        // 核心步骤：获取并重组所有独白
+        await fetchAndProcessAllMonologues()
       } else {
         throw new Error(startResponse.data.message || '创建游戏失败')
       }
@@ -63,51 +61,72 @@ export function useGameLogic() {
   }
 
   /**
-   * 获取所有角色的独白并暂存
+   * 获取所有角色的独白，切分句子，并按轮次重组成一个统一的队列
    */
-  const fetchAllMonologues = async () => {
+  const fetchAndProcessAllMonologues = async () => {
     if (!sessionId.value || availableCharacters.value.length === 0) return
 
-    console.log('[Frontend] 开始获取所有角色的独白...')
-    const tempMonologueQueue: Monologue[] = []
+    console.log('[Frontend] 开始获取并处理所有角色的独白...')
+    isLoading.value = true
 
-    // 注意：这里的角色列表是后端返回的可选角色，实际独白可能需要所有角色
-    // 为了演示，我们假设就是这些角色的独白
-    for (const characterId of availableCharacters.value) {
+    // 临时存放每个角色的句子数组
+    const characterSentencesMap: Map<string, string[]> = new Map()
+
+    // 1. 并行获取所有角色的独白
+    const monologuePromises = availableCharacters.value.map(async (characterId) => {
       try {
-        const monologueResponse = await axios.post(
+        const response = await axios.post(
           `${API_BASE_URL}/session/${sessionId.value}/action`,
-          {
-            action_type: 'monologue',
-            character_id: characterId
-          }
+          { action_type: 'monologue', character_id: characterId }
         )
+        if (response.data.success && response.data.data.monologue_sentences) {
+          // 将一大段话根据换行符切分成句子数组
+          const sentences = response.data.data.monologue_sentences
+            .flatMap((paragraph: string) => paragraph.split('\n').filter(s => s.trim() !== ''))
 
-        if (monologueResponse.data.success) {
-          tempMonologueQueue.push({
-            characterId: characterId,
-            sentences: monologueResponse.data.data.monologue_sentences
-          })
-          console.log(`[Frontend] 成功获取角色 [${characterId}] 的独白`)
+          characterSentencesMap.set(characterId, sentences)
+          console.log(`[Frontend] 成功获取并切分角色 [${characterId}] 的 ${sentences.length} 句独白`)
         }
       } catch (e) {
         console.error(`[Frontend] 获取角色 [${characterId}] 独白失败:`, e)
       }
+    })
+
+    await Promise.all(monologuePromises)
+
+    // 2. 按轮次重组独白到统一队列中
+    const newQueue: MonologueEntry[] = []
+    const characterOrder = availableCharacters.value
+    const maxSentences = 5 // 每人5句话
+
+    for (let sentenceIndex = 0; sentenceIndex < maxSentences; sentenceIndex++) {
+      for (const characterId of characterOrder) {
+        const sentences = characterSentencesMap.get(characterId)
+        if (sentences && sentenceIndex < sentences.length) {
+          newQueue.push({
+            characterId: characterId,
+            sentence: sentences[sentenceIndex]
+          })
+        }
+      }
     }
-    monologueQueue.value = tempMonologueQueue
-    console.log('[Frontend] 所有独白已暂存:', monologueQueue.value)
+
+    unifiedMonologueQueue.value = newQueue
+    currentSentenceIndex.value = 0 // 重置索引
+    isLoading.value = false
+    console.log(`[Frontend] 独白重组完成，共 ${newQueue.length} 句话。`, newQueue)
   }
 
   /**
-   * 推进到下一个角色的独白
-   * @returns 返回下一个要进行独白的角色信息，如果没有则返回null
+   * 推进到总队列中的下一句话
+   * @returns 返回下一个发言条目，如果没有则返回null
    */
-  const advanceToNextMonologue = (): Monologue | null => {
-    if (currentMonologueIndex.value < monologueQueue.value.length) {
-      const nextMonologue = monologueQueue.value[currentMonologueIndex.value]
-      console.log(`[Frontend] 推进幕次, 当前独白角色: ${nextMonologue.characterId}`)
-      currentMonologueIndex.value++
-      return nextMonologue
+  const advanceToNextSentence = (): MonologueEntry | null => {
+    if (currentSentenceIndex.value < unifiedMonologueQueue.value.length) {
+      const nextEntry = unifiedMonologueQueue.value[currentSentenceIndex.value]
+      console.log(`[Frontend] 推进幕次, 第 ${currentSentenceIndex.value + 1} 句, 发言角色: ${nextEntry.characterId}`)
+      currentSentenceIndex.value++
+      return nextEntry
     }
     console.log('[Frontend] 所有角色独白已完成。')
     return null
@@ -116,11 +135,11 @@ export function useGameLogic() {
   return {
     sessionId,
     availableCharacters,
-    monologueQueue,
-    currentMonologueIndex,
+    unifiedMonologueQueue,
+    currentSentenceIndex,
     isLoading,
     error,
     startGame,
-    advanceToNextMonologue
+    advanceToNextSentence,
   }
 }
