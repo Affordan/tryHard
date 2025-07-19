@@ -95,7 +95,20 @@
       </div>
 
       <div class="sidebar-section ask-section">
-        <h3 class="section-title">提问</h3>
+        <div class="section-header">
+          <h3 class="section-title">提问 (第 {{ currentAct }}幕)</h3>
+          <div class="qna-controls">
+            <span class="question-counter">提问: {{ questionCount }} / 12</span>
+            <button
+              @click="handleAdvanceAct"
+              :disabled="isLoading || gamePhase !== 'qna'"
+              class="next-act-button"
+            >
+              进入下一幕
+            </button>
+          </div>
+        </div>
+
         <div class="character-tabs">
           <button
             v-for="char in interrogationTargets"
@@ -165,7 +178,9 @@ const {
   interrogationTargets, // 使用过滤后的提问对象
   unifiedMonologueQueue,
   currentSentenceIndex,
-  startGame, advanceMonologue, askQuestion, addHistoryEntry
+  currentAct, // 新增
+  questionCount, // 新增
+  startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry // 新增 advanceAct
 } = useGame();
 
 // 历史记录类型定义
@@ -302,6 +317,21 @@ const handleAskQuestion = async () => {
   if (!customQuestion.value.trim() || !selectedCharacterId.value) return;
   await askQuestion(selectedCharacterId.value, customQuestion.value);
   customQuestion.value = '';
+
+  // 检查是否达到提问上限
+  if (questionCount.value >= 12) {
+    // 可以在这里自动触发进入下一幕，或者只是提示用户
+    console.log("已达到本幕提问上限，请点击'进入下一幕'。");
+    // 可选：自动推进
+    // handleAdvanceAct();
+  }
+};
+
+// 新增：处理进入下一幕的点击事件
+const handleAdvanceAct = async () => {
+  await advanceAct();
+  // 推进幕次后，第一个独白会自动开始（如果存在）
+  handleContinue();
 };
 
 // 拖动相关方法
@@ -470,6 +500,14 @@ watch(interactionHistory, () => {
     }
   });
 }, { deep: true });
+
+// 监听提问数，达到12次时可以给出提示
+watch(questionCount, (newCount) => {
+    if (newCount === 12) {
+        // 在历史记录中添加系统提示
+        addHistoryEntry({ type: 'system', content: '本幕提问已达上限，请点击"进入下一幕"继续。' });
+    }
+});
 
 // 点击外部关闭下拉框
 const handleClickOutside = (_event: Event) => {
@@ -648,6 +686,47 @@ onUnmounted(() => {
 }
 .ask-question-button:hover:not(:disabled) { background: #434190; }
 .ask-question-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.qna-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.question-counter {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: #1a202c;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.next-act-button {
+  padding: 0.4rem 0.8rem;
+  background: #c0392b; /* 使用醒目的颜色 */
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.next-act-button:hover:not(:disabled) {
+  background: #e74c3c;
+  transform: translateY(-1px);
+}
+.next-act-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Responsive Design */
 @media (max-width: 1024px) {

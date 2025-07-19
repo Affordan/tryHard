@@ -17,7 +17,7 @@ export type HistoryEntry =
   | { type: 'answer'; characterId: string; content: string }
   | { type: 'system'; content: string };
 
-export type GamePhase = 'initializing' | 'monologue' | 'qna' | 'completed';
+export type GamePhase = 'initializing' | 'monologue' | 'qna' | 'final_choice' | 'completed';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1/langchain-game'
 
@@ -35,6 +35,8 @@ export function useGame() {
   const gamePhase = ref<GamePhase>('initializing')
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const currentAct = ref(1) // 新增：当前幕次
+  const questionCount = ref(0) // 新增：当前幕次的提问计数
   
   // 独白相关状态
   const monologueProgress = ref({ current: 0, total: 0 })
@@ -108,7 +110,7 @@ export function useGame() {
       // 添加系统消息到历史记录
       interactionHistory.value.push({
         type: 'system',
-        content: `游戏开始！你被分配为角色：${chosenCharacterId}`
+        content: `第一幕开始！你被分配为角色：${chosenCharacterId}`
       })
 
       gamePhase.value = 'monologue'
@@ -198,6 +200,7 @@ export function useGame() {
     // 当独白结束时，切换游戏阶段到QNA
     console.log('[Game] 所有独白已完成，切换到QNA阶段。')
     gamePhase.value = 'qna'
+    questionCount.value = 0 // 进入QNA时重置提问计数
     return null
   }
 
@@ -248,6 +251,7 @@ export function useGame() {
           characterId: targetCharacterId,
           content: answer
         })
+        questionCount.value++ // 提问成功后计数加一
         console.log(`[Game] 收到回答: ${answer}`)
       } else {
         throw new Error(response.data.error || '提问失败')
@@ -259,7 +263,44 @@ export function useGame() {
       isLoading.value = false
     }
   }
-  
+
+  /**
+   * 推进到下一幕
+   */
+  const advanceAct = async () => {
+    if (!sessionId.value) return;
+    isLoading.value = true
+    try {
+      // 1. 调用后端API推进幕次
+      const response = await axios.post(`${API_BASE_URL}/session/${sessionId.value}/action`, {
+        action_type: 'advance_act'
+      });
+
+      if (!response.data.success) {
+        throw new Error('推进幕次失败');
+      }
+
+      const { new_act, current_phase } = response.data.data;
+      currentAct.value = new_act;
+      gamePhase.value = current_phase;
+
+      interactionHistory.value.push({
+        type: 'system',
+        content: `--- 第 ${new_act} 幕开始 ---`
+      });
+
+      // 2. 重新获取新一幕的独白
+      if (current_phase === 'monologue' && characters.value.size > 0) {
+        const characterIds = Array.from(characters.value.keys());
+        await fetchAndProcessAllMonologues(characterIds);
+      }
+    } catch (e: any) {
+      error.value = e.message;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   return {
     // 状态
     sessionId: readonly(sessionId),
@@ -278,10 +319,15 @@ export function useGame() {
         Array.from(characters.value.values()).filter(c => !c.isPlayer)
     ),
 
+    // 新增返回
+    currentAct: readonly(currentAct),
+    questionCount: readonly(questionCount),
+
     // 方法
     startGame,
     advanceMonologue,
     askQuestion,
+    advanceAct, // 新增方法
     addHistoryEntry
   }
 }
