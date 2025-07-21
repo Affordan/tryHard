@@ -179,65 +179,308 @@
               我的剧本
             </h3>
             <div class="script-content">
-              <div class="character-info">
-                <h4 class="info-subtitle">角色背景</h4>
-                <div class="character-background">
-                  <p v-if="playerCharacterId">
-                    <strong>{{ getDisplayName(playerCharacterId, characters) }}</strong>
-                  </p>
-                  <p class="character-description">
-                    作为一名经验丰富的侦探，你拥有敏锐的观察力和逻辑推理能力。
-                    在这个案件中，你需要通过与各个角色的对话来收集线索，找出真相。
-                  </p>
+              <!-- 角色背景卡片 -->
+              <div class="script-card character-info-card">
+                <div class="card-header">
+                  <span class="card-icon character-icon">🕵️</span>
+                  <h4 class="card-title">角色档案</h4>
+                  <div class="card-expand-btn" @click="toggleCardExpanded('character')">
+                    <span class="expand-icon" :class="{ expanded: expandedCards.character }">⌄</span>
+                  </div>
+                </div>
+                <div class="card-content" :class="{ expanded: expandedCards.character }">
+                  <div class="character-profile">
+                    <div class="character-header">
+                      <div class="character-avatar">👩‍⚕️</div>
+                      <div class="character-info">
+                        <div class="character-name">许苗苗</div>
+                        <div class="character-role">医生 (29岁)</div>
+                        <div class="character-badge">💊 医疗专家</div>
+                      </div>
+                    </div>
+
+                    <div class="character-details">
+                      <div class="detail-section">
+                        <h5 class="detail-title">👨‍👩‍👧‍👦 家庭关系</h5>
+                        <div class="family-info">
+                          <div class="family-member">
+                            <span class="member-role">丈夫:</span>
+                            <span class="member-name">朱丰震 (老二)</span>
+                          </div>
+                          <div class="family-member">
+                            <span class="member-role">公公:</span>
+                            <span class="member-name">朱大强</span>
+                          </div>
+                          <div class="family-member">
+                            <span class="member-role">大哥:</span>
+                            <span class="member-name">朱丰翰</span>
+                          </div>
+                          <div class="family-member">
+                            <span class="member-role">妹妹:</span>
+                            <span class="member-name">朱玲玲</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="detail-section">
+                        <h5 class="detail-title">📋 角色背景</h5>
+                        <p class="character-description">
+                          你是朱家老二的媳妇，一名收入不错的医生。嫁到朱家后，全家人都对你很好，
+                          尤其是公公朱大强对你无微不至。你的丈夫朱丰震一直想创业但没有成功，
+                          家里的经济主要靠你的工资维持。你有一笔秘密积蓄，是为了给丈夫创业失败后的保障。
+                        </p>
+                      </div>
+
+                      <div class="detail-section">
+                        <h5 class="detail-title">🔍 关键线索</h5>
+                        <ul class="investigation-principles">
+                          <li>最近给娘家汇了20万应急</li>
+                          <li>对朱丰翰有莫名的依靠感</li>
+                          <li>对自己的名字感到陌生</li>
+                          <li>记忆中有个特别喜欢的男人但想不起来</li>
+                          <li>全家自驾游时你父亲身体不适留在家中</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="current-objectives">
-                <h4 class="info-subtitle">当前目标</h4>
-                <div class="objectives-list">
-                  <div class="objective-item" :class="{ completed: gamePhase === 'completed' }">
-                    <span class="objective-icon">🎯</span>
-                    <span class="objective-text">
-                      {{ gamePhase === 'monologue' ? '观看剧情发展' :
-                         gamePhase === 'qna' ? '询问角色获取线索' :
-                         gamePhase === 'completed' ? '案件已结束' : '准备开始调查' }}
-                    </span>
+              <!-- 当前目标卡片 -->
+              <div class="script-card objectives-card">
+                <div class="card-header">
+                  <span class="card-icon objectives-icon">🎯</span>
+                  <h4 class="card-title">任务目标</h4>
+                  <div class="card-expand-btn" @click="toggleCardExpanded('objectives')">
+                    <span class="expand-icon" :class="{ expanded: expandedCards.objectives }">⌄</span>
                   </div>
-                  <div class="objective-item">
-                    <span class="objective-icon">💭</span>
-                    <span class="objective-text">已提问 {{ questionCount }} 次</span>
-                  </div>
-                  <div class="objective-item">
-                    <span class="objective-icon">📊</span>
-                    <span class="objective-text">当前进度: {{ currentSentenceIndex + 1 }}/{{ unifiedMonologueQueue.length }}</span>
+                </div>
+                <div class="card-content" :class="{ expanded: expandedCards.objectives }">
+                  <div class="objectives-overview">
+                    <!-- 主要目标 -->
+                    <div class="primary-objective">
+                      <div class="objective-header">
+                        <span class="objective-priority">🔥 核心任务</span>
+                        <span class="objective-status-badge" :class="gamePhase">
+                          {{ gamePhase === 'completed' ? '✅ 已完成' : '🔄 进行中' }}
+                        </span>
+                      </div>
+                      <div class="objective-description">
+                        <h5>调查真相</h5>
+                        <div class="main-objectives">
+                          <div class="objective-item">
+                            <span class="objective-number">1.</span>
+                            <span class="objective-text">调查清楚是谁拿走了这20万？</span>
+                          </div>
+                          <div class="objective-item">
+                            <span class="objective-number">2.</span>
+                            <span class="objective-text">你的身边究竟发生了什么事？</span>
+                          </div>
+                        </div>
+                        <p class="objective-detail">
+                          {{ gamePhase === 'monologue' ? '仔细观察每个角色的言行，寻找关于20万失踪的线索' :
+                             gamePhase === 'qna' ? '通过提问深入了解家庭成员的动机和行为' :
+                             gamePhase === 'completed' ? '恭喜！你已经揭开了事件的真相' : '准备开始调查工作' }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- 统计信息 -->
+                    <div class="objectives-stats">
+                      <div class="stat-item">
+                        <div class="stat-icon">💭</div>
+                        <div class="stat-content">
+                          <span class="stat-label">提问次数</span>
+                          <span class="stat-value">{{ questionCount }}</span>
+                        </div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-content">
+                          <span class="stat-label">调查进度</span>
+                          <span class="stat-value">{{ storyProgressPercentage }}%</span>
+                        </div>
+                      </div>
+                      <div class="stat-item">
+                        <div class="stat-icon">🎭</div>
+                        <div class="stat-content">
+                          <span class="stat-label">可询问角色</span>
+                          <span class="stat-value">{{ interrogationTargets.length }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 次要目标 -->
+                    <div class="secondary-objectives" v-if="expandedCards.objectives">
+                      <h5 class="section-subtitle">📋 调查要点</h5>
+                      <div class="objective-checklist">
+                        <div class="checklist-item" :class="{ completed: questionCount > 0 }">
+                          <span class="check-icon">{{ questionCount > 0 ? '✅' : '⭕' }}</span>
+                          <span class="check-text">询问家庭成员关于20万的去向</span>
+                        </div>
+                        <div class="checklist-item" :class="{ completed: questionCount >= 3 }">
+                          <span class="check-icon">{{ questionCount >= 3 ? '✅' : '⭕' }}</span>
+                          <span class="check-text">深入了解家庭关系和动机</span>
+                        </div>
+                        <div class="checklist-item" :class="{ completed: storyProgressPercentage >= 50 }">
+                          <span class="check-icon">{{ storyProgressPercentage >= 50 ? '✅' : '⭕' }}</span>
+                          <span class="check-text">探索记忆中的疑点</span>
+                        </div>
+                        <div class="checklist-item" :class="{ completed: gamePhase === 'completed' }">
+                          <span class="check-icon">{{ gamePhase === 'completed' ? '✅' : '⭕' }}</span>
+                          <span class="check-text">揭开身份和事件的真相</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div class="story-progress">
-                <h4 class="info-subtitle">故事进展</h4>
-                <div class="progress-info">
-                  <div class="progress-bar">
-                    <div
-                      class="progress-fill"
-                      :style="{ width: unifiedMonologueQueue.length > 0 ? ((currentSentenceIndex + 1) / unifiedMonologueQueue.length * 100) + '%' : '0%' }"
-                    ></div>
+              <!-- 剧本背景卡片 -->
+              <div class="script-card narrative-card">
+                <div class="card-header">
+                  <span class="card-icon narrative-icon">📖</span>
+                  <h4 class="card-title">剧本背景</h4>
+                  <div class="card-expand-btn" @click="toggleCardExpanded('narrative')">
+                    <span class="expand-icon" :class="{ expanded: expandedCards.narrative }">⌄</span>
                   </div>
-                  <p class="progress-text">
-                    {{ unifiedMonologueQueue.length > 0 ?
-                       Math.round((currentSentenceIndex + 1) / unifiedMonologueQueue.length * 100) : 0 }}% 完成
-                  </p>
+                </div>
+                <div class="card-content" :class="{ expanded: expandedCards.narrative }">
+                  <div class="narrative-section">
+                    <!-- 当前情况概述 -->
+                    <div class="current-situation">
+                      <h5 class="section-subtitle">🏠 当前情况</h5>
+                      <p class="narrative-text">
+                        你父亲朱大强丢了一个20万的存折，他认为肯定是自家人偷的。
+                        这笔钱原本是他打算用来出远门送远方表亲朱立杰的。
+                        现在他要求所有人都来家里，把事情交代清楚。
+                      </p>
+                    </div>
+
+                    <!-- 详细背景 -->
+                    <div class="detailed-background" v-if="expandedCards.narrative">
+                      <h5 class="section-subtitle">📚 详细背景</h5>
+                      <div class="background-timeline">
+                        <div class="timeline-item">
+                          <span class="timeline-marker">🚗</span>
+                          <div class="timeline-content">
+                            <strong>全家自驾游：</strong>你因父亲身体不适没有参加，丈夫朱丰震留下陪伴父亲
+                          </div>
+                        </div>
+                        <div class="timeline-item">
+                          <span class="timeline-marker">💰</span>
+                          <div class="timeline-content">
+                            <strong>秘密汇款：</strong>你给娘家汇了20万应急，这是你的秘密积蓄
+                          </div>
+                        </div>
+                        <div class="timeline-item">
+                          <span class="timeline-marker">📮</span>
+                          <div class="timeline-content">
+                            <strong>噩耗传来：</strong>除夕收到远方表亲朱立杰过世的消息，父亲伤心过度昏睡
+                          </div>
+                        </div>
+                        <div class="timeline-item">
+                          <span class="timeline-marker">📞</span>
+                          <div class="timeline-content">
+                            <strong>紧急召集：</strong>第二天父亲发现20万存折丢失，召集所有人回家
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 关键疑点 -->
+                    <div class="key-mysteries" v-if="expandedCards.narrative">
+                      <h5 class="section-subtitle">❓ 关键疑点</h5>
+                      <div class="mystery-list">
+                        <div class="mystery-item">
+                          <span class="mystery-icon">🤔</span>
+                          <span class="mystery-text">为什么你对自己的名字感到陌生？</span>
+                        </div>
+                        <div class="mystery-item">
+                          <span class="mystery-icon">💭</span>
+                          <span class="mystery-text">记忆中那个特别喜欢的男人是谁？</span>
+                        </div>
+                        <div class="mystery-item">
+                          <span class="mystery-icon">💔</span>
+                          <span class="mystery-text">为什么看到朱大强会有痛心的感觉？</span>
+                        </div>
+                        <div class="mystery-item">
+                          <span class="mystery-icon">🤝</span>
+                          <span class="mystery-text">对朱丰翰的依靠感从何而来？</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="game-tips">
-                <h4 class="info-subtitle">游戏提示</h4>
-                <div class="tips-list">
-                  <p class="tip-item">💡 仔细观察每个角色的对话和行为</p>
-                  <p class="tip-item">🔍 在提问阶段积极询问可疑之处</p>
-                  <p class="tip-item">📝 注意记录重要的线索和信息</p>
+              <!-- 故事进展卡片 -->
+              <div class="script-card progress-card">
+                <div class="card-header">
+                  <span class="card-icon progress-icon">📈</span>
+                  <h4 class="card-title">调查进度</h4>
+                  <div class="card-expand-btn" @click="toggleCardExpanded('progress')">
+                    <span class="expand-icon" :class="{ expanded: expandedCards.progress }">⌄</span>
+                  </div>
+                </div>
+                <div class="card-content" :class="{ expanded: expandedCards.progress }">
+                  <div class="progress-section">
+                    <!-- 主要进度显示 -->
+                    <div class="main-progress">
+                      <div class="progress-header">
+                        <div class="progress-stats">
+                          <span class="progress-current">{{ currentSentenceIndex + 1 }}</span>
+                          <span class="progress-separator">/</span>
+                          <span class="progress-total">{{ unifiedMonologueQueue.length }}</span>
+                        </div>
+                        <div class="progress-percentage">{{ storyProgressPercentage }}%</div>
+                      </div>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar">
+                          <div
+                            class="progress-fill"
+                            :style="{ width: storyProgressPercentage + '%' }"
+                          >
+                            <div class="progress-shimmer"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="progress-label">案件调查完成度</div>
+                    </div>
+
+                    <!-- 详细进度信息 -->
+                    <div class="detailed-progress" v-if="expandedCards.progress">
+                      <div class="progress-milestones">
+                        <h5 class="section-subtitle">🏁 调查里程碑</h5>
+                        <div class="milestone-list">
+                          <div class="milestone-item" :class="{ reached: storyProgressPercentage >= 25 }">
+                            <span class="milestone-icon">🚀</span>
+                            <span class="milestone-text">调查启动 (25%)</span>
+                            <span class="milestone-status">{{ storyProgressPercentage >= 25 ? '✅' : '⏳' }}</span>
+                          </div>
+                          <div class="milestone-item" :class="{ reached: storyProgressPercentage >= 50 }">
+                            <span class="milestone-icon">🔍</span>
+                            <span class="milestone-text">深入调查 (50%)</span>
+                            <span class="milestone-status">{{ storyProgressPercentage >= 50 ? '✅' : '⏳' }}</span>
+                          </div>
+                          <div class="milestone-item" :class="{ reached: storyProgressPercentage >= 75 }">
+                            <span class="milestone-icon">🧩</span>
+                            <span class="milestone-text">线索汇总 (75%)</span>
+                            <span class="milestone-status">{{ storyProgressPercentage >= 75 ? '✅' : '⏳' }}</span>
+                          </div>
+                          <div class="milestone-item" :class="{ reached: storyProgressPercentage >= 100 }">
+                            <span class="milestone-icon">🎯</span>
+                            <span class="milestone-text">真相大白 (100%)</span>
+                            <span class="milestone-status">{{ storyProgressPercentage >= 100 ? '✅' : '⏳' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+
             </div>
           </div>
         </transition>
@@ -390,6 +633,14 @@ const isHistoryVisible = ref(false);
 const isScriptVisible = ref(false);
 const isAskVisible = ref(false);
 
+// 卡片展开状态控制
+const expandedCards = ref({
+  character: false,
+  objectives: false,
+  narrative: false,
+  progress: false
+});
+
 // 可拖动侧边栏状态（保留原有的）
 const isDragging = ref(false)
 
@@ -438,6 +689,26 @@ const logPendingQA = () => {
 // 当前显示的角色（优先显示审讯角色，否则显示剧情角色）
 const displayedCharacter = computed(() => {
   return selectedInterrogationCharacter.value || activeCharacter.value
+})
+
+// 故事进度计算
+const storyProgressPercentage = computed(() => {
+  if (unifiedMonologueQueue.value.length === 0) return 0
+  return Math.round(((currentSentenceIndex.value + 1) / unifiedMonologueQueue.value.length) * 100)
+})
+
+// 当前游戏阶段描述
+const currentPhaseDescription = computed(() => {
+  switch (gamePhase.value) {
+    case 'monologue':
+      return '观看剧情发展'
+    case 'qna':
+      return '询问角色获取线索'
+    case 'completed':
+      return '案件已结束'
+    default:
+      return '准备开始调查'
+  }
 })
 
 const isCharacterSpeaking = computed(() => {
@@ -681,6 +952,11 @@ const toggleAskPanel = () => {
   isMaximized.value = false;
 };
 
+// 卡片展开/收缩控制
+const toggleCardExpanded = (cardType: keyof typeof expandedCards.value) => {
+  expandedCards.value[cardType] = !expandedCards.value[cardType];
+};
+
 // 保留原有的拖动方法（用于兼容性）
 const startDragging = (event: MouseEvent) => {
   isDragging.value = true
@@ -907,6 +1183,20 @@ onUnmounted(() => {
   background: #000;
 }
 
+/* 全局滚动增强 */
+* {
+  scroll-behavior: smooth;
+}
+
+/* 确保所有可滚动容器都支持鼠标滚轮 */
+.script-content,
+.history-log,
+.card-content,
+.sidebar-section {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .main-game-panel, .resize-divider, .interrogation-sidebar {
   height: 100vh;
 }
@@ -1068,6 +1358,7 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .interrogation-sidebar .sidebar-section:hover {
@@ -1132,11 +1423,14 @@ onUnmounted(() => {
 
 .history-log {
   overflow-y: auto;
+  overflow-x: hidden;
   font-size: 0.875rem;
   line-height: 1.7;
   color: #cbd5e1;
   height: 100%;
   padding-right: 0.5rem;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
 }
 
 /* 美化历史记录滚动条 */
@@ -1291,54 +1585,350 @@ onUnmounted(() => {
   background: linear-gradient(90deg, #64748b 0%, #334155 100%);
 }
 
-/* 剧本面板样式 */
+/* 剧本面板样式 - 优化版本 */
 .script-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
 }
 
-.info-subtitle {
+/* 自定义滚动条样式 */
+.script-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.script-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.script-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.script-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 卡片基础样式 - 玻璃拟态效果 */
+.script-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.script-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+/* 卡片展开按钮 */
+.card-expand-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.card-expand-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.expand-icon {
+  font-size: 0.875rem;
+  color: var(--accent-color);
+  transition: transform 0.3s ease;
+  font-weight: bold;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.card-icon {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.2);
+  box-shadow:
+    0 0 20px rgba(99, 102, 241, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.card-icon:hover {
+  box-shadow:
+    0 0 30px rgba(99, 102, 241, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex-grow: 1;
+
+}
+
+.card-content {
+  padding: 0 1.25rem 1.25rem;
+  overflow-y: auto; /* 始终允许垂直滚动 */
+  overflow-x: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 300px; /* 默认收缩高度，增加到300px以显示更多内容 */
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.card-content.expanded {
+  max-height: 600px; /* 展开高度，调整为更合理的高度 */
+}
+
+/* 卡片内容滚动条样式 - 应用于所有卡片内容 */
+.card-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.card-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* 角色信息卡片 */
+.character-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.character-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.character-avatar {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 50%;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.character-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.character-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--player-color);
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+  margin: 0;
+}
+
+.character-role {
+  font-size: 0.875rem;
+  color: var(--accent-color);
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.character-badge {
+  font-size: 0.75rem;
+  color: #fbbf24;
+  font-weight: 600;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  width: fit-content;
+}
+
+.character-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  
+}
+
+.detail-section {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+.detail-title {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--accent-color);
+  color: var(--text-primary);
   margin: 0 0 0.75rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.character-info {
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.character-background {
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.character-background strong {
-  color: var(--player-color);
-  font-weight: 600;
+.skill-tag {
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-weight: 500;
 }
 
 .character-description {
-  margin: 0.5rem 0 0 0;
   font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
 }
 
-.current-objectives {
-  background: rgba(51, 65, 85, 0.3);
+.investigation-principles {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.investigation-principles li {
+  margin-bottom: 0.5rem;
+}
+
+/* 家庭信息样式 */
+.family-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.family-member {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  padding: 1rem;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.member-role {
+  font-weight: 600;
+  color: #94a3b8;
+  min-width: 3rem;
+}
+
+.member-name {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+/* 主要目标样式 */
+.main-objectives {
+  margin: 1rem 0;
+}
+
+.main-objectives .objective-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #ef4444;
+}
+
+.objective-number {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 1.1rem;
+  min-width: 1.5rem;
+}
+
+.objective-text {
+  color: #e2e8f0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 目标列表 */
 .objectives-list {
   display: flex;
   flex-direction: column;
@@ -1348,79 +1938,487 @@ onUnmounted(() => {
 .objective-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
+  gap: 1rem;
+  padding: 0.75rem;
   background: rgba(15, 23, 42, 0.4);
-  border-radius: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(71, 85, 105, 0.3);
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.objective-item.active {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 .objective-item.completed {
   background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
 }
 
-.objective-icon {
-  font-size: 1.1rem;
+.objective-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-secondary);
   flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.objective-item.active .objective-indicator {
+  background: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-color);
+}
+
+.objective-item.completed .objective-indicator {
+  background: #22c55e;
+  box-shadow: 0 0 10px #22c55e;
+}
+
+.objective-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
 }
 
 .objective-text {
   font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.objective-status {
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  flex-grow: 1;
+  opacity: 0.8;
 }
 
-.story-progress {
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 8px;
+.objective-value {
+  font-size: 0.875rem;
+  color: var(--player-color);
+  font-weight: 600;
+}
+
+/* 目标卡片新样式 */
+.objectives-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.primary-objective {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
   padding: 1rem;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
 }
 
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: rgba(71, 85, 105, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+.objective-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
 }
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-color) 0%, var(--player-color) 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+.objective-priority {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-.progress-text {
+.objective-status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.objective-status-badge.monologue,
+.objective-status-badge.qna {
+  color: var(--accent-color);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.objective-status-badge.completed {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.objective-description h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.objective-detail {
   font-size: 0.875rem;
   color: var(--text-secondary);
-  text-align: center;
+  line-height: 1.6;
   margin: 0;
 }
 
-.game-tips {
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  border: 1px solid rgba(71, 85, 105, 0.3);
+.objectives-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
 }
 
-.tips-list {
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.secondary-objectives {
+  margin-top: 1rem;
+}
+
+.section-subtitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.objective-checklist {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.tip-item {
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.2);
+  transition: all 0.3s ease;
+}
+
+.checklist-item.completed {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.check-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.check-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  flex-grow: 1;
+}
+
+.checklist-item.completed .check-text {
+  color: var(--text-primary);
+}
+
+/* 进度部分样式 - 优化版本 */
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-progress {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.progress-current {
+  color: var(--player-color);
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+.progress-separator {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.progress-total {
+  color: var(--text-secondary);
+}
+
+.progress-percentage {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  text-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+}
+
+.progress-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 14px;
+  background: rgba(71, 85, 105, 0.3);
+  border-radius: 7px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color) 0%, var(--player-color) 100%);
+  border-radius: 7px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+}
+
+.progress-shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 2.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-label {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  opacity: 0.8;
+}
+
+.detailed-progress {
+  margin-top: 1rem;
+}
+
+.progress-milestones {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.2);
+}
+
+.milestone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.milestone-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  transition: all 0.3s ease;
+}
+
+.milestone-item.reached {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+}
+
+.milestone-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.milestone-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  flex-grow: 1;
+}
+
+.milestone-item.reached .milestone-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.milestone-status {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+
+
+/* 剧本背景样式 */
+.narrative-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.current-situation,
+.detailed-background,
+.key-mysteries {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.narrative-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0.5rem 0 0 0;
+}
+
+.background-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(34, 211, 238, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #22d3ee;
+}
+
+.timeline-marker {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.timeline-content {
   font-size: 0.875rem;
   color: var(--text-secondary);
   line-height: 1.5;
-  margin: 0;
-  padding: 0.25rem 0;
 }
+
+.timeline-content strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mystery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.mystery-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(168, 85, 247, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #a855f7;
+}
+
+.mystery-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.mystery-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+
 
 /* Responsive Design */
 @media (max-width: 1024px) {
