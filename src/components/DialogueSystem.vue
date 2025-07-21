@@ -194,8 +194,7 @@ watch(() => props.canContinue, (newVal) => {
   max-height: 50vh;
   min-height: 200px;
   /* Temporary debug background */
-  background: rgba(255, 0, 0, 0.3);
-  border: 5px solid red;
+  
 }
 
 .ai-processing-display {

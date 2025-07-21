@@ -593,13 +593,13 @@ const getRestText = (text: string) => {
   background: radial-gradient(circle, #8B0000 0%, #DC143C  50%, #8B0000 100%);
   cursor: pointer;
   transition: all 0.3s ease;
-  background: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg') no-repeat center center;
+  background: url('/public/print.jpg') no-repeat center center;
   background-size: cover; /* 确保背景图片完全覆盖按钮区域 */
 }
 
 .wax-seal-button:hover {
   transform: scale(1.05);
-  background-image: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg');
+  background-image: url('/public/print.jpg');
 }
 
 .wax-seal-button:active {

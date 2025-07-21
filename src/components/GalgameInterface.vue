@@ -1,7 +1,7 @@
 <template>
   <div class="galgame-main-container">
     <!-- Left Panel: Main Game Area (70%) -->
-    <div class="main-game-panel">
+    <div class="main-game-panel" :class="{ 'maximized': isMaximized }">
       <!-- Dynamic Background System -->
       <BackgroundSystem
         :current-scene-id="currentSceneId"
@@ -72,84 +72,220 @@
       />
     </div>
 
-    <!-- Resizable Divider -->
-    <div
-      class="resize-divider"
-      @mousedown="startDragging"
-      :class="{ 'dragging': isDragging }"
-    ></div>
+    <div class="resize-divider" @mousedown="startResize"></div>
 
-    <div class="interrogation-sidebar">
-
-      <div class="sidebar-section history-section">
-        <h3 class="section-title">询问历史</h3>
-        <div class="history-log" ref="historyLogRef">
-          <div v-if="interactionHistory.length === 0" class="history-placeholder">
-            还没有任何记录...
-          </div>
-          <div v-for="(entry, index) in interactionHistory" :key="index" :class="['history-entry', `entry-${entry.type}`]">
-            <div v-if="entry.type === 'system'" class="system-message">{{ entry.content }}</div>
-            <div v-else-if="entry.type === 'monologue'">
-              <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
-              <span class="history-content">{{ entry.content }}</span>
-            </div>
-            <div v-else-if="entry.type === 'question'">
-              <span class="history-speaker player">{{ getDisplayName(entry.questionerId, characters) }}</span>
-              <span> 对 </span>
-              <span class="history-speaker">{{ getDisplayName(entry.targetCharacterId, characters) }}</span>
-              <span> 说: </span>
-              <span class="history-content question">"{{ entry.content }}"</span>
-            </div>
-            <div v-else-if="entry.type === 'answer'">
-              <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
-              <span class="history-content answer">{{ entry.content }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sidebar-section ask-section">
-        <div class="section-header">
-          <h3 class="section-title">提问 (第 {{ currentAct }}幕)</h3>
-          <div class="qna-controls">
-            <span class="question-counter">提问: {{ questionCount }} / 12</span>
-            <button
-              @click="handleAdvanceAct"
-              :disabled="isLoading || gamePhase !== 'qna'"
-              class="next-act-button"
-            >
-              {{ currentAct === 2 ? '查看最终结局' : '进入下一幕' }}
-            </button>
-          </div>
-        </div>
-
-        <div class="character-tabs">
-          <button
-            v-for="char in interrogationTargets"
-            :key="char.id"
-            @click="selectedCharacterId = char.id"
-            :class="['tab-item', { active: selectedCharacterId === char.id }]"
-            :disabled="gamePhase !== 'qna'"
-          >
-            {{ char.id }} </button>
-        </div>
-        <textarea
-          v-model="customQuestion"
-          placeholder="在此输入你对角色的提问..."
-          class="custom-question-textarea"
-          rows="4"
-          :disabled="gamePhase !== 'qna' || isLoading"
-        ></textarea>
-        <button
-          @click="handleAskQuestion"
-          :disabled="!customQuestion.trim() || !selectedCharacterId || isLoading || gamePhase !== 'qna'"
-          class="ask-question-button"
-        >
-          发送问题
-        </button>
-      </div>
+    <div class="right-control-panel">
+      <button
+        @click="toggleSidebar"
+        class="control-button"
+        :title="isSidebarVisible ? '隐藏侧边栏' : '显示侧边栏'"
+      >
+        <svg v-if="isSidebarVisible" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm13.793 4.293a1 1 0 00-1.414 1.414L15.414 12l1.979 1.979a1 1 0 101.414-1.414L17.414 12l1.979-1.979a1 1 0 00-1.414-1.414L17.414 10.586l-1.979-1.979zM7 12a1 1 0 011-1h8a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" />
+        </svg>
+        <svg v-else viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm8.707 7.707a1 1 0 01-1.414-1.414L10.586 12l-1.979-1.979a1 1 0 011.414-1.414L12 10.586l1.979-1.979a1 1 0 111.414 1.414L13.414 12l1.979 1.979a1 1 0 01-1.414 1.414L12 13.414l-1.979 1.979z" clip-rule="evenodd" />
+        </svg>
+      </button>
+      <button
+        @click="toggleMaximize"
+        class="control-button"
+        :title="isMaximized ? '恢复' : '最大化对话'"
+      >
+        <svg v-if="isMaximized" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path fill-rule="evenodd" d="M5 5a3 3 0 013-3h8a3 3 0 013 3v2a1 1 0 11-2 0V5a1 1 0 00-1-1H8a1 1 0 00-1 1v14a1 1 0 102 0v-2a1 1 0 112 0v2a1 1 0 001 1h8a1 1 0 001-1v-2a1 1 0 112 0v2a3 3 0 01-3 3H8a3 3 0 01-3-3v-2a1 1 0 112 0v2z" clip-rule="evenodd" />
+        </svg>
+        <svg v-else viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+          <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5zm1 1h14v12H4V6z" clip-rule="evenodd" />
+        </svg>
+      </button>
     </div>
 
+    <div
+      class="right-ui-container"
+      :style="{ width: isSidebarVisible ? sidebarWidth + 'px' : '0px' }"
+      :class="{ 'is-hidden': !isSidebarVisible }"
+    >
+      <div class="sidebar-toggles-inner">
+        <button
+          @click="toggleHistoryPanel"
+          class="toggle-button inner"
+          :class="{ active: isHistoryVisible }"
+          title="询问历史"
+        >
+          📜
+        </button>
+        <button
+          @click="toggleScriptPanel"
+          class="toggle-button inner"
+          :class="{ active: isScriptVisible }"
+          title="我的剧本"
+        >
+          📖
+        </button>
+        <button
+          @click="toggleAskPanel"
+          class="toggle-button inner"
+          :class="{ active: isAskVisible }"
+          title="提问"
+        >
+          💡
+        </button>
+      </div>
+
+      <div
+        class="interrogation-sidebar"
+        :class="{
+          'two-visible': (isHistoryVisible && isScriptVisible) || (isHistoryVisible && isAskVisible) || (isScriptVisible && isAskVisible),
+          'three-visible': isHistoryVisible && isScriptVisible && isAskVisible
+        }"
+      >
+        <transition name="panel-slide">
+          <div v-if="isHistoryVisible" class="sidebar-section history-section">
+            <h3 class="section-title">
+              <span class="title-icon">📜</span>
+              询问历史
+            </h3>
+            <div class="history-log" ref="historyLogRef">
+              <div v-if="interactionHistory.length === 0" class="history-placeholder">
+                还没有任何记录...
+              </div>
+              <div v-for="(entry, index) in interactionHistory" :key="index" :class="['history-entry', `entry-${entry.type}`]">
+                <div v-if="entry.type === 'system'" class="system-message">{{ entry.content }}</div>
+                <div v-else-if="entry.type === 'monologue'">
+                  <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
+                  <span class="history-content">{{ entry.content }}</span>
+                </div>
+                <div v-else-if="entry.type === 'question'">
+                  <span class="history-speaker player">{{ getDisplayName(entry.questionerId, characters) }}</span>
+                  <span> 对 </span>
+                  <span class="history-speaker">{{ getDisplayName(entry.targetCharacterId, characters) }}</span>
+                  <span> 说: </span>
+                  <span class="history-content question">"{{ entry.content }}"</span>
+                </div>
+                <div v-else-if="entry.type === 'answer'">
+                  <span class="history-speaker">{{ getDisplayName(entry.characterId, characters) }}: </span>
+                  <span class="history-content answer">{{ entry.content }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <transition name="panel-slide">
+          <div v-if="isScriptVisible" class="sidebar-section script-section">
+            <h3 class="section-title">
+              <span class="title-icon">📖</span>
+              我的剧本
+            </h3>
+            <div class="script-content">
+              <div class="character-info">
+                <h4 class="info-subtitle">角色背景</h4>
+                <div class="character-background">
+                  <p v-if="playerCharacterId">
+                    <strong>{{ getDisplayName(playerCharacterId, characters) }}</strong>
+                  </p>
+                  <p class="character-description">
+                    作为一名经验丰富的侦探，你拥有敏锐的观察力和逻辑推理能力。
+                    在这个案件中，你需要通过与各个角色的对话来收集线索，找出真相。
+                  </p>
+                </div>
+              </div>
+
+              <div class="current-objectives">
+                <h4 class="info-subtitle">当前目标</h4>
+                <div class="objectives-list">
+                  <div class="objective-item" :class="{ completed: gamePhase === 'completed' }">
+                    <span class="objective-icon">🎯</span>
+                    <span class="objective-text">
+                      {{ gamePhase === 'monologue' ? '观看剧情发展' :
+                         gamePhase === 'qna' ? '询问角色获取线索' :
+                         gamePhase === 'completed' ? '案件已结束' : '准备开始调查' }}
+                    </span>
+                  </div>
+                  <div class="objective-item">
+                    <span class="objective-icon">💭</span>
+                    <span class="objective-text">已提问 {{ questionCount }} 次</span>
+                  </div>
+                  <div class="objective-item">
+                    <span class="objective-icon">📊</span>
+                    <span class="objective-text">当前进度: {{ currentSentenceIndex + 1 }}/{{ unifiedMonologueQueue.length }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="story-progress">
+                <h4 class="info-subtitle">故事进展</h4>
+                <div class="progress-info">
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: unifiedMonologueQueue.length > 0 ? ((currentSentenceIndex + 1) / unifiedMonologueQueue.length * 100) + '%' : '0%' }"
+                    ></div>
+                  </div>
+                  <p class="progress-text">
+                    {{ unifiedMonologueQueue.length > 0 ?
+                       Math.round((currentSentenceIndex + 1) / unifiedMonologueQueue.length * 100) : 0 }}% 完成
+                  </p>
+                </div>
+              </div>
+
+              <div class="game-tips">
+                <h4 class="info-subtitle">游戏提示</h4>
+                <div class="tips-list">
+                  <p class="tip-item">💡 仔细观察每个角色的对话和行为</p>
+                  <p class="tip-item">🔍 在提问阶段积极询问可疑之处</p>
+                  <p class="tip-item">📝 注意记录重要的线索和信息</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <transition name="panel-slide">
+          <div v-if="isAskVisible" class="sidebar-section ask-section">
+            <h3 class="section-title">
+              <span class="title-icon">💡</span>
+              提问
+            </h3>
+            <div class="custom-dropdown" :class="{ 'is-open': isDropdownOpen }">
+              <button @click="toggleDropdown" class="dropdown-toggle" :disabled="gamePhase !== 'qna'">
+                <span class="selected-value">
+                  {{ selectedCharacterId ? getDisplayName(selectedCharacterId, characters) : '选择一个角色' }}
+                </span>
+                <span class="dropdown-arrow">▼</span>
+              </button>
+              <transition name="dropdown-fade">
+                <div v-if="isDropdownOpen" class="dropdown-menu">
+                  <div
+                    v-for="char in interrogationTargets"
+                    :key="char.id"
+                    class="dropdown-item"
+                    @click="selectCharacter(char.id)"
+                  >
+                    {{ char.displayName }}
+                  </div>
+                </div>
+              </transition>
+            </div>
+            <textarea
+              v-model="customQuestion"
+              placeholder="在此输入你对角色的提问..."
+              class="custom-question-textarea"
+              :disabled="gamePhase !== 'qna' || isLoading"
+            ></textarea>
+            <button
+              @click="handleAskQuestion"
+              :disabled="!customQuestion.trim() || !selectedCharacterId || isLoading || gamePhase !== 'qna'"
+              class="ask-question-button"
+            >
+              <span class="button-text">发送问题</span>
+              <span class="button-icon">➤</span>
+            </button>
+          </div>
+        </transition>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -235,15 +371,58 @@ const canContinue = ref(false)
 // Q&A阶段状态
 const selectedCharacterId = ref<string | null>(null)
 
+// 新增：用于控制下拉菜单的 ref
+const isDropdownOpen = ref(false);
+
 // 新增：一个 ref 用于暂存已显示但尚未记录的问答对
 const pendingQA = ref<{ question: HistoryEntry; answer: HistoryEntry } | null>(null);
 
-// 可拖动侧边栏状态
-const sidebarWidth = ref(30) // 默认30%
+// 新的侧边栏控制状态
+const isSidebarVisible = ref(false);
+const isMaximized = ref(false);
+const sidebarWidth = ref(400); // 默认宽度
+const minSidebarWidth = 200;
+const maxSidebarWidth = 600;
+let startX = 0;
+
+// 面板可见性控制
+const isHistoryVisible = ref(false);
+const isScriptVisible = ref(false);
+const isAskVisible = ref(false);
+
+// 可拖动侧边栏状态（保留原有的）
 const isDragging = ref(false)
 
 // --- 本地组件状态 ---
 const historyLogRef = ref<HTMLElement | null>(null);
+
+// 新增：历史区和提问区高度，初始60/40
+const historyHeight = ref(60);
+let isSidebarDividerDragging = false;
+
+const startSidebarDividerDrag = (event: MouseEvent) => {
+  isSidebarDividerDragging = true;
+  const startY = event.clientY;
+  const startHeight = historyHeight.value;
+  const sidebar = document.querySelector('.sidebar-flex-container') as HTMLElement;
+  const sidebarRect = sidebar?.getBoundingClientRect();
+  const sidebarHeight = sidebarRect?.height || 1;
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isSidebarDividerDragging) return;
+    const deltaY = e.clientY - startY;
+    let newHistoryHeight = startHeight + (deltaY / sidebarHeight) * 100;
+    newHistoryHeight = Math.max(20, Math.min(80, newHistoryHeight));
+    historyHeight.value = newHistoryHeight;
+  };
+  const onMouseUp = () => {
+    isSidebarDividerDragging = false;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
 
 // 新增：一个辅助函数，用于将暂存的问答记录到历史中
 const logPendingQA = () => {
@@ -266,6 +445,19 @@ const isCharacterSpeaking = computed(() => {
 })
 
 // --- 方法 ---
+// 新增：切换下拉菜单的显示/隐藏
+const toggleDropdown = () => {
+  if (gamePhase.value === 'qna') {
+    isDropdownOpen.value = !isDropdownOpen.value;
+  }
+};
+
+// 新增：处理角色选择的函数
+const selectCharacter = (characterId: string) => {
+  selectedCharacterId.value = characterId;
+  isDropdownOpen.value = false; // 选择后自动关闭
+};
+
 /**
  * 处理独白条目的通用函数
  */
@@ -424,7 +616,72 @@ const handleAdvanceAct = async () => {
   }
 };
 
-// 拖动相关方法
+// 新的拖动调整宽度方法
+const startResize = (e: MouseEvent) => {
+  startX = e.clientX;
+  window.addEventListener('mousemove', resize);
+  window.addEventListener('mouseup', stopResize);
+};
+
+// 拖动进行中
+const resize = (e: MouseEvent) => {
+  if (!startX) return;
+  const newWidth = sidebarWidth.value - (e.clientX - startX);
+  sidebarWidth.value = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, newWidth));
+};
+
+// 拖动结束
+const stopResize = () => {
+  startX = 0;
+  window.removeEventListener('mousemove', resize);
+  window.removeEventListener('mouseup', stopResize);
+};
+
+// 切换侧边栏可见性
+const toggleSidebar = () => {
+  isSidebarVisible.value = !isSidebarVisible.value;
+  // 点击显示时，如果之前没有打开过任何面板，可以默认打开一个（可选）
+  if (isSidebarVisible.value && !isHistoryVisible.value && !isScriptVisible.value && !isAskVisible.value) {
+    isScriptVisible.value = true; // 默认显示剧本面板
+  }
+  isMaximized.value = false; // 关闭侧边栏时取消最大化
+};
+
+// 切换最大化状态
+const toggleMaximize = () => {
+  isMaximized.value = !isMaximized.value;
+  isSidebarVisible.value = !isMaximized.value; // 最大化时隐藏侧边栏，恢复时显示之前的状态
+  if (isSidebarVisible.value && !isHistoryVisible.value && !isScriptVisible.value && !isAskVisible.value) {
+    isScriptVisible.value = true; // 恢复时如果侧边栏可见且没有打开面板，默认打开剧本面板
+  }
+};
+
+// 内部按钮点击时确保侧边栏可见
+const toggleHistoryPanel = () => {
+  isHistoryVisible.value = !isHistoryVisible.value;
+  if (!isSidebarVisible.value) {
+    isSidebarVisible.value = true;
+  }
+  isMaximized.value = false;
+};
+
+const toggleScriptPanel = () => {
+  isScriptVisible.value = !isScriptVisible.value;
+  if (!isSidebarVisible.value) {
+    isSidebarVisible.value = true;
+  }
+  isMaximized.value = false;
+};
+
+const toggleAskPanel = () => {
+  isAskVisible.value = !isAskVisible.value;
+  if (!isSidebarVisible.value) {
+    isSidebarVisible.value = true;
+  }
+  isMaximized.value = false;
+};
+
+// 保留原有的拖动方法（用于兼容性）
 const startDragging = (event: MouseEvent) => {
   isDragging.value = true
   const startX = event.clientX
@@ -632,13 +889,14 @@ onUnmounted(() => {
 <style scoped>
 /* 严格按照新设计图的样式 */
 :root {
-  --sidebar-bg: #1a202c;
-  --sidebar-section-bg: #2d3748;
-  --sidebar-border-color: #4a5568;
+  --sidebar-bg: rgba(30, 41, 59, 0.6);
+  --sidebar-section-bg: rgba(15, 23, 42, 0.6);
+  --sidebar-border-color: rgba(71, 85, 105, 0.5);
   --text-primary: #e2e8f0;
-  --text-secondary: #a0aec0;
-  --accent-color: #4c51bf;
-  --player-color: #38b2ac; /* 青色，用于玩家高亮 */
+  --text-secondary: #94a3b8;
+  --accent-color: #6366f1;
+  --player-color: #22d3ee;
+  --glow-color: rgba(99, 102, 241, 0.5);
 }
 
 .galgame-main-container {
@@ -649,63 +907,224 @@ onUnmounted(() => {
   background: #000;
 }
 
-/* Left Panel: Main Game Area (70%) */
-.main-game-panel {
-  flex: 0 0 70%;
-  position: relative;
+.main-game-panel, .resize-divider, .interrogation-sidebar {
   height: 100vh;
-  overflow: hidden;
 }
 
-/* Resizable Divider */
+.main-game-panel {
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+  transition: flex-grow 0.3s ease;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.main-game-panel.maximized {
+  flex-grow: 100 !important; /* 确保完全占据空间 */
+}
+
+/* 可拖动条 */
 .resize-divider {
-  width: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 5px;
+  background: rgba(71, 85, 105, 0.3);
   cursor: col-resize;
-  transition: background-color 0.2s;
+  position: relative;
+  z-index: 50;
+  transition: background-color 0.3s ease;
 }
 
 .resize-divider:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--glow-color);
 }
 
-.resize-divider.dragging {
-  background: rgba(255, 255, 255, 0.6);
+/* 右侧控制面板（显示/隐藏/最大化按钮） */
+.right-control-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 5px;
+  background: rgba(15, 23, 42, 0.3);
+  border-left: 1px solid var(--sidebar-border-color);
+  z-index: 60;
 }
 
-/* Right Panel: Interactive Interrogation Sidebar (30%) */
-.interrogation-sidebar {
-  flex: 0 0 30%;
-  height: 100vh;
-  background: var(--sidebar-bg);
-  color: var(--text-primary);
-  border-left: 2px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(20px);
-  overflow-y: auto;
-  overflow-x: visible;
+.right-control-panel .control-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: rgba(51, 65, 85, 0.5);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.right-control-panel .control-button:hover {
+  background: var(--accent-color);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* 右侧UI容器（包含切换按钮和实际侧边栏） */
+.right-ui-container {
+  display: flex;
+  transition: width 0.3s ease;
+}
+
+.right-ui-container.is-hidden {
+  display: none;
+}
+
+/* 内部切换按钮（位于侧边栏内部） */
+.right-ui-container .sidebar-toggles-inner {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.5rem 0.5rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-left: 1px solid var(--sidebar-border-color);
+  z-index: 10;
 }
 
-.sidebar-section {
+.right-ui-container .sidebar-toggles-inner .toggle-button.inner {
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: rgba(51, 65, 85, 0.5);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.right-ui-container .sidebar-toggles-inner .toggle-button.inner:hover,
+.right-ui-container .sidebar-toggles-inner .toggle-button.inner.active {
+  background: var(--accent-color);
+  color: white;
+  transform: scale(1.1);
+}
+
+.sidebar-divider {
+  height: 12px;
+  background: linear-gradient(90deg, #6366f1 0%, #22d3ee 100%);
+  cursor: row-resize;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.18);
+  position: relative;
+  z-index: 2;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.sidebar-divider:hover,
+.sidebar-divider:active {
+  background: linear-gradient(90deg, #a5b4fc 0%, #38bdf8 100%);
+  box-shadow: 0 4px 24px 0 rgba(99,102,241,0.28);
+}
+
+/* 侧边栏主体 */
+.interrogation-sidebar {
+  width: 100%; /* 内部宽度 */
+  height: 100vh;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--sidebar-border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.interrogation-sidebar.is-hidden {
+  display: none;
+}
+
+.sidebar-flex-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+.interrogation-sidebar .sidebar-section {
+  flex-grow: 1;
+  min-height: 0;
   background: var(--sidebar-section-bg);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--sidebar-border-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
 }
 
-.section-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin: 0 0 1rem 0;
+.interrogation-sidebar .sidebar-section:hover {
+  border-color: var(--glow-color);
 }
 
-/* 历史记录样式 */
+/* 动态高度分配 */
+.interrogation-sidebar.two-visible .history-section,
+.interrogation-sidebar.two-visible .script-section {
+  flex-basis: 60%;
+}
+
+.interrogation-sidebar.two-visible .ask-section {
+  flex-basis: 40%;
+}
+
+.interrogation-sidebar.three-visible .history-section {
+  flex-basis: 40%;
+}
+
+.interrogation-sidebar.three-visible .script-section {
+  flex-basis: 30%;
+}
+
+.interrogation-sidebar.three-visible .ask-section {
+  flex-basis: 30%;
+}
+
+/* 面板滑入滑出动画 */
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.panel-slide-leave-active {
+  position: absolute; /* 避免动画时页面跳动 */
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.title-icon {
+  font-size: 1.2rem;
+}
+
+/* 历史记录区 */
 .history-section {
   flex-grow: 1;
   min-height: 0;
@@ -719,112 +1138,289 @@ onUnmounted(() => {
   height: 100%;
   padding-right: 0.5rem;
 }
-.history-log::-webkit-scrollbar { width: 4px; }
-.history-log::-webkit-scrollbar-thumb { background: #718096; border-radius: 2px; }
 
-.history-placeholder { color: #718096; text-align: center; padding-top: 2rem; }
+/* 美化历史记录滚动条 */
+.history-log::-webkit-scrollbar { width: 6px; }
+.history-log::-webkit-scrollbar-track { background: transparent; }
+.history-log::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+.history-log::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
+
+.history-placeholder { color: var(--text-secondary); text-align: center; padding-top: 2rem; }
 .history-entry { margin-bottom: 0.75rem; }
-
-.history-speaker { font-weight: 600; color: #90cdf4; }
+.history-speaker { font-weight: 600; color: #a5b4fc; }
 .history-speaker.player { color: var(--player-color); }
-.history-content.question { color: #f6e05e; font-style: italic; }
+.history-content.question { color: #facc15; font-style: italic; }
+.system-message { text-align: center; color: var(--text-secondary); font-style: italic; font-size: 0.8rem; padding: 0.5rem 0;}
 
-.system-message {
-    text-align: center;
-    color: var(--text-secondary);
-    font-style: italic;
-    font-size: 0.8rem;
-    padding: 0.5rem 0;
-}
-
-/* 提问区样式 */
+/* 提问区 */
 .ask-section { flex-shrink: 0; }
-.character-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.tab-item {
-  padding: 0.5rem 0.75rem;
-  background: var(--sidebar-border-color);
-  border: none;
-  color: var(--text-primary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-.tab-item:hover:not(:disabled) { background: #718096; }
-.tab-item:disabled { opacity: 0.5; cursor: not-allowed; }
-.tab-item.active { background: var(--accent-color); color: white; font-weight: 600; }
 
-.custom-question-textarea {
-  width: 100%;
-  background: #1a202c;
-  border: 1px solid var(--sidebar-border-color);
-  border-radius: 6px;
-  padding: 0.75rem;
-  color: white;
-  font-size: 0.875rem;
-  resize: none;
-  margin-bottom: 0.75rem;
-  transition: border-color 0.2s;
-}
-.custom-question-textarea:focus { outline: none; border-color: var(--accent-color); }
-
-.ask-question-button {
-  width: 100%;
-  padding: 0.75rem;
-  background: var(--accent-color);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.ask-question-button:hover:not(:disabled) { background: #434190; }
-.ask-question-button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* 自定义下拉框 */
+.custom-dropdown {
+  position: relative;
   margin-bottom: 1rem;
 }
 
-.qna-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.question-counter {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  background: #1a202c;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.next-act-button {
-  padding: 0.4rem 0.8rem;
-  background: #c0392b; /* 使用醒目的颜色 */
-  border: none;
-  color: white;
-  border-radius: 6px;
+.dropdown-toggle {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(51, 65, 85, 0.8);
+  border: 1px solid var(--sidebar-border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
   cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 600;
-  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
 }
-.next-act-button:hover:not(:disabled) {
-  background: #e74c3c;
-  transform: translateY(-1px);
+
+.dropdown-toggle:hover:not(:disabled) {
+  border-color: var(--accent-color);
 }
-.next-act-button:disabled {
-  opacity: 0.5;
+.dropdown-toggle:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
+.custom-dropdown.is-open .dropdown-toggle {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 12px var(--glow-color);
+}
 
+.dropdown-arrow {
+  transition: transform 0.3s ease;
+}
+.custom-dropdown.is-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: #1e293b;
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.dropdown-item {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* 可拖动提问框 */
+.custom-question-textarea {
+  width: 100%;
+  background: rgba(36, 54, 80, 0.92);
+  border: 1.5px solid #6366f1;
+  border-radius: 12px;
+  padding: 1rem;
+  color: #e0e7ef;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
+  transition: border 0.25s, box-shadow 0.25s, background 0.25s;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 200px;
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.08);
+}
+.custom-question-textarea:focus {
+  outline: none;
+  border-color: #38bdf8;
+  background: rgba(36, 54, 80, 0.98);
+  box-shadow: 0 0 16px 0 #38bdf844;
+}
+
+/* 发送按钮 */
+.ask-question-button {
+  width: 100%;
+  padding: 0.9rem;
+  background: linear-gradient(90deg, #6366f1 0%, #22d3ee 100%);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.7rem;
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.10);
+  letter-spacing: 1px;
+}
+.ask-question-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #818cf8 0%, #38bdf8 100%);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 32px 0 #38bdf888;
+}
+.ask-question-button:active:not(:disabled) {
+  background: linear-gradient(90deg, #6366f1 0%, #0ea5e9 100%);
+  transform: scale(0.98);
+}
+.ask-question-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(90deg, #64748b 0%, #334155 100%);
+}
+
+/* 剧本面板样式 */
+.script-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.info-subtitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.character-info {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.character-background {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.character-background strong {
+  color: var(--player-color);
+  font-weight: 600;
+}
+
+.character-description {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+}
+
+.current-objectives {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.objectives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.objective-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.objective-item.completed {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.objective-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.objective-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  flex-grow: 1;
+}
+
+.story-progress {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(71, 85, 105, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color) 0%, var(--player-color) 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+.game-tips {
+  background: rgba(51, 65, 85, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tip-item {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0.25rem 0;
+}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
