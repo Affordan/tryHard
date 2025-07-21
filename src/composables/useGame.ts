@@ -382,6 +382,22 @@ const advanceMonologue = (): MonologueEntry | null => {
     triggerFinalChoice();
   };
 
+  // 新增：一个计算属性，根据当前游戏状态返回对应的背景ID
+  const currentBackgroundId = computed(() => {
+    const backgroundId = (() => {
+      if (currentAct.value === 1) {
+        return gamePhase.value === 'monologue' ? 'act1_monologue_bg' : 'act1_qna_bg';
+      }
+      if (currentAct.value === 2) {
+        return gamePhase.value === 'monologue' ? 'act2_monologue_bg' : 'act2_qna_bg';
+      }
+      // 默认或最终结局的背景
+      return 'act1_monologue_bg';
+    })();
+
+    console.log(`[Background] Act: ${currentAct.value}, Phase: ${gamePhase.value}, Background: ${backgroundId}`);
+    return backgroundId;
+  });
 
   return {
     // 状态
@@ -405,6 +421,7 @@ const advanceMonologue = (): MonologueEntry | null => {
     // 新增返回
     currentAct: readonly(currentAct),
     questionCount: readonly(questionCount),
+    currentBackgroundId, // 新增：导出这个计算属性
 
     // 方法
     startGame,

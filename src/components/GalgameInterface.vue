@@ -4,15 +4,13 @@
     <div class="main-game-panel" :class="{ 'maximized': isMaximized }">
       <!-- Dynamic Background System -->
       <BackgroundSystem
-        :current-scene-id="currentSceneId"
+        :current-scene-id="currentBackgroundId"
         :scene-backgrounds="sceneBackgrounds"
       />
 
       <!-- Character Display Panel -->
       <CharacterPanel
-        :active-character="displayedCharacter"
-        :is-character-speaking="isCharacterSpeaking"
-        :is-ai-processing="isLoading"
+        :active-character="activeCharacter"
       />
 
       <!-- Dialogue System -->
@@ -579,6 +577,7 @@ const {
   questionCount, // 新增
   playerCharacterId, // 确保解构了 playerCharacterId
   finalEnding, // 新增最终结局状态
+  currentBackgroundId, // 新增：从 useGame 中解构出 currentBackgroundId
   startGame, advanceMonologue, askQuestion, advanceAct, addHistoryEntry, // 新增 advanceAct
   incrementQuestionCount, // 引入新的计数函数
   testEndingDisplay // 临时测试函数
