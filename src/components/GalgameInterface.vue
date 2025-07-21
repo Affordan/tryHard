@@ -489,6 +489,13 @@
               <span class="title-icon">💡</span>
               提问
             </h3>
+            <button
+              @click="handleAdvanceAct"
+              :disabled="isLoading"
+              class="skip-qna-button"
+              >
+              {{ currentAct >= 2 ? '查看最终结局' : '进入下一幕' }}
+            </button>
             <div class="custom-dropdown" :class="{ 'is-open': isDropdownOpen }">
               <button @click="toggleDropdown" class="dropdown-toggle" :disabled="gamePhase !== 'qna'">
                 <span class="selected-value">
@@ -1491,7 +1498,8 @@ onUnmounted(() => {
 
 .dropdown-menu {
   position: absolute;
-  bottom: 100%;
+  top: 100%;
+  margin-top: 0.5rem;
   left: 0;
   right: 0;
   background: #1e293b;
@@ -2467,5 +2475,41 @@ onUnmounted(() => {
     padding: 0.4rem 0.6rem;
     font-size: 0.8rem;
   }
+}
+/* 用于布局标题和跳过按钮 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header .section-title {
+  margin-bottom: 0; /* 移除标题的下边距 */
+}
+
+/* 跳过按钮的样式 */
+.skip-qna-button {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid #c0392b;
+  color: #e74c3c;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.skip-qna-button:hover:not(:disabled) {
+  background: #c0392b;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.skip-qna-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

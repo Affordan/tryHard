@@ -40,7 +40,7 @@ export function useGameData() {
       characterName: "朱大强",
       characterRole: "父亲", // 请根据剧本填写正确角色
       characterImageURL: "/placeholder.svg?text=朱大强", // 建议替换为角色图片路径
-      portraitImageURL: "/portraits/朱大强.jpg", // 指向 public/portraits/朱大强.jpg
+      portraitImageURL: "/portraits/朱大强.png", // 指向 public/portraits/朱大强.jpg
       llmName: "Qwen-Max", // 示例
       llmProvider: "Alibaba",
       themeColor: "#ff6b6b",
@@ -53,7 +53,8 @@ export function useGameData() {
       characterName: "朱丰翰",
       characterRole: "国企员工",
       characterImageURL: "/placeholder.svg?text=朱丰翰",
-      portraitImageURL: "/portraits/朱丰翰.jpg", // 指向 public/portraits/朱丰翰.jpg
+      portraitImageURL: "/portraits/朱丰翰.png", // 指向 public/portraits/朱丰翰.jpg
+
       llmName: "DeepSeek-V3",
       llmProvider: "DeepSeek",
       themeColor: "#2c3e50",
@@ -66,7 +67,7 @@ export function useGameData() {
       characterName: "朱丰震",
       characterRole: "创业者",
       characterImageURL: "/placeholder.svg?text=朱丰震",
-      portraitImageURL: "/portraits/朱丰震.jpg", // 指向 public/portraits/朱丰震.jpg
+      portraitImageURL: "/portraits/朱丰震.png", // 指向 public/portraits/朱丰震.jpg
       llmName: "GPT-4",
       llmProvider: "OpenAI",
       themeColor: "#74b9ff",
@@ -79,7 +80,7 @@ export function useGameData() {
       characterName: "朱玲玲",
       characterRole: "女儿",
       characterImageURL: "/placeholder.svg?text=朱玲玲",
-      portraitImageURL: "/portraits/朱玲玲.jpg", // 指向 public/portraits/朱玲玲.jpg
+      portraitImageURL: "/portraits/朱玲玲.png", // 指向 public/portraits/朱玲玲.jpg
       llmName: "Kimi",
       llmProvider: "Moonshot",
       themeColor: "#a855f7",
@@ -92,7 +93,7 @@ export function useGameData() {
       characterName: "许苗苗",
       characterRole: "医护人员",
       characterImageURL: "/placeholder.svg?text=许苗苗",
-      portraitImageURL: "/portraits/许苗苗.jpg", // 指向 public/portraits/许苗苗.jpg
+      portraitImageURL: "/portraits/许苗苗.png", // 指向 public/portraits/许苗苗.jpg
       llmName: "Claude-3",
       llmProvider: "Anthropic",
       themeColor: "#38b2ac",
@@ -109,7 +110,7 @@ export function useGameData() {
       id: "detective_office",
       backgroundImageURL: "/placeholder.svg?height=800&width=1200&text=Detective+Office+Scene",
       atmosphere: "mysterious",
-      weatherEffect: "rain",
+      weatherEffect: "null",
     },
     {
       id: "medical_examination_room",
@@ -121,7 +122,7 @@ export function useGameData() {
       id: "act1_monologue_bg",
       backgroundImageURL: "/backgrounds/act1_monologue.jpg", // 指向 public/backgrounds/act1_monologue.jpg
       atmosphere: "mysterious",
-      weatherEffect: "rain",
+      weatherEffect: "null",
     },
     {
       id: "act1_qna_bg",

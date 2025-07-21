@@ -1,11 +1,12 @@
 <template>
   <div class="character-portrait-stage">
-    <transition name="character-fade">
+    <transition name="character-slide-in">
       <div v-if="activeCharacter" :key="activeCharacter.characterId" class="character-container">
         <img
           :src="activeCharacter.portraitImageURL"
           :alt="activeCharacter.characterName"
           class="character-portrait"
+          :style="{ '--glow-color': activeCharacter.themeColor || '#a5b4fc' }"
         />
       </div>
     </transition>
@@ -20,12 +21,10 @@ const props = defineProps<{
   activeCharacter: any | null;
 }>();
 
-// 添加监听器来调试角色切换
+// 监听角色切换（用于调试，可在生产环境中移除）
 watch(() => props.activeCharacter, (newCharacter) => {
   if (newCharacter) {
     console.log(`[CharacterPanel] Switching to character: ${newCharacter.characterName}, Portrait: ${newCharacter.portraitImageURL}`);
-  } else {
-    console.log('[CharacterPanel] No active character');
   }
 }, { immediate: true });
 </script>
@@ -33,39 +32,52 @@ watch(() => props.activeCharacter, (newCharacter) => {
 <style scoped>
 .character-portrait-stage {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  top: 0;
+  inset: 0; /* 铺满整个父容器 */
+  overflow: hidden; /* 防止动画溢出 */
   display: flex;
-  justify-content: center; /* 或者 'flex-start' 靠左, 'flex-end' 靠右 */
-  align-items: flex-end;
-  pointer-events: none; /* 允许点击穿透 */
-  z-index: 5; /* 确保在背景之上，对话框之下 */
+  align-items: flex-end; /* 所有内容底部对齐 */
+  pointer-events: none;
+  z-index: 5;
 }
 
 .character-container {
   position: absolute;
-  bottom: 0;
-  left: 5%; /* 控制人物在屏幕左侧的位置 */
+  bottom: -2%; /* 1. 调整位置: 让人物稍微"走出"画面底部 */
+  left: -5%;  /* 1. 调整位置: 向左偏移，打破居中 */
+  transform: translateX(0);
 }
 
 .character-portrait {
-  max-height: 90vh; /* 人物最高占屏幕高度的90% */
-  max-width: 600px; /* 防止图片过大 */
+  max-height: 76vh; /* 缩小到80%: 95vh * 0.8 = 76vh */
+  max-width: 560px; /* 缩小到80%: 700px * 0.8 = 560px */
   object-fit: contain;
   object-position: bottom center;
+
+  /* 原始样式，无特效 */
 }
 
-/* 人物出现和消失的淡入淡出动画 */
-.character-fade-enter-active,
-.character-fade-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
+/* 4. 更丝滑的入场动画 */
+.character-slide-in-enter-active,
+.character-slide-in-leave-active {
+  transition: all 0.7s cubic-bezier(0.25, 1, 0.5, 1); /* 使用缓出曲线 */
 }
 
-.character-fade-enter-from,
-.character-fade-leave-to {
+.character-slide-in-enter-from,
+.character-slide-in-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
+  transform: translateX(-50px); /* 从更左边滑入 */
+}
+
+/* 呼吸动画的定义 */
+@keyframes subtle-breathing {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01); /* 极其细微的放大 */
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 </style>
