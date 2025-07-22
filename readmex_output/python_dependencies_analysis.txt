@@ -1,0 +1,15 @@
+# Python Dependencies Analysis Report
+
+## Language: python
+## Primary dependency file: requirements.txt
+
+## Existing dependency files:
+None found
+
+## Discovered imports (3 unique):
+import os
+import re
+import win32com.client
+
+## Generated dependency file:
+pywin32>=300
