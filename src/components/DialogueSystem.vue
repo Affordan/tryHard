@@ -23,9 +23,10 @@
     <!-- Elegant Dialogue Display -->
     <div v-else-if="currentDialogue.text" class="dialogue-display-system">
       <!-- Name Plate -->
-      <div v-if="activeCharacter" class="speaker-name-plate">
-        {{ activeCharacter.characterName }}
-      </div>
+       <div v-if="activeCharacter" class="speaker-name-plate">
+          <span class="character-name">{{ activeCharacter.characterName }}</span>
+         <span v-if="activeCharacter.llmName" class="model-name">({{ activeCharacter.llmName }})</span>
+       </div>
 
       <!-- Dialogue Content -->
       <div class="dialogue-content-display">
@@ -136,20 +137,38 @@ watch(() => props.canContinue, (newVal) => {
 }
 
 /* 姓名牌样式 */
+/* (已更新) 姓名牌样式 */
 .speaker-name-plate {
   position: absolute;
-  top: 0;
+  top: -1.4rem;
   left: 2rem;
   transform: translateY(-50%);
   background: rgba(30, 41, 59, 0.85);
   backdrop-filter: blur(8px);
-  color: #a5b4fc; /* 主题色 */
   padding: 0.5rem 1.5rem;
   border-radius: 8px;
-  font-size: 1.2rem;
-  font-weight: bold;
   border: 1px solid rgba(165, 184, 252, 0.4);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+  /* 新增：使用 flex 布局来排列名字和模型 */
+  display: flex;
+  align-items: baseline; /* 基线对齐，视觉效果更好 */
+  gap: 0.5rem; /* 名字和模型之间的间距 */
+}
+
+/* (新增) 角色名的样式 */
+.character-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #a5b4fc; /* 主题色 */
+}
+
+/* (新增) AI模型名的样式 */
+.model-name {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #94a3b8; /* 次要文字颜色 */
+  transform: translateY(-1px); /* 微调位置，让括号看起来更协调 */
 }
 
 /* 对话内容区样式 */

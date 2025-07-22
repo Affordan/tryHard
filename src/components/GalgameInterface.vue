@@ -296,7 +296,7 @@
                         <div class="stat-icon">📈</div>
                         <div class="stat-content">
                           <span class="stat-label">调查进度</span>
-                          <span class="stat-value">{{ storyProgressPercentage }}%</span>
+                          <span class="stat-value">{{ Math.min(100, storyProgressPercentage) }}%</span>
                         </div>
                       </div>
                       <div class="stat-item">
@@ -427,17 +427,17 @@
                     <div class="main-progress">
                       <div class="progress-header">
                         <div class="progress-stats">
-                          <span class="progress-current">{{ currentSentenceIndex + 1 }}</span>
+                          <span class="progress-current">{{ Math.min(currentSentenceIndex + 1, unifiedMonologueQueue.length) }}</span>
                           <span class="progress-separator">/</span>
                           <span class="progress-total">{{ unifiedMonologueQueue.length }}</span>
                         </div>
-                        <div class="progress-percentage">{{ storyProgressPercentage }}%</div>
+                        <div class="progress-percentage">{{ Math.min(100, storyProgressPercentage) }}%</div>
                       </div>
                       <div class="progress-bar-container">
                         <div class="progress-bar">
                           <div
                             class="progress-fill"
-                            :style="{ width: storyProgressPercentage + '%' }"
+                            :style="{ width: Math.min(100, storyProgressPercentage) + '%' }"
                           >
                             <div class="progress-shimmer"></div>
                           </div>
@@ -700,7 +700,9 @@ const displayedCharacter = computed(() => {
 // 故事进度计算
 const storyProgressPercentage = computed(() => {
   if (unifiedMonologueQueue.value.length === 0) return 0
-  return Math.round(((currentSentenceIndex.value + 1) / unifiedMonologueQueue.value.length) * 100)
+  // 确保进度百分比不会超过100%
+  const currentProgress = Math.min(currentSentenceIndex.value + 1, unifiedMonologueQueue.value.length)
+  return Math.round((currentProgress / unifiedMonologueQueue.value.length) * 100)
 })
 
 // 当前游戏阶段描述
@@ -833,34 +835,49 @@ const processMonologueEntry = (entry: any) => {
 
 
 // (已更新) 提问按钮的核心逻辑
+// (已更新) 提问按钮的核心逻辑
 const handleAskQuestion = async () => {
   if (!customQuestion.value.trim() || !selectedCharacterId.value || !playerCharacterId.value) return;
 
-  // 步骤 1: 将【上一轮】暂存的问答记录到历史中
+  // 步骤 1: 记录【上一轮】暂存的问答 (逻辑不变)
   logPendingQA();
 
-  // 步骤 2: 准备本次提问所需的数据
+  // 步骤 2: 准备本次提问所需的数据 (逻辑不变)
   const currentQuestionText = customQuestion.value.trim();
   const currentTargetId = selectedCharacterId.value;
 
   customQuestion.value = ''; // 立即清空输入框
 
-  // 步骤 3: 调用API获取回答，这个函数现在只返回回答文本
+  // ====================================================================
+  // 核心改动在这里！
+  // 步骤 3: 【先】更新当前活跃角色为即将提问的角色
+  const characterDetails = characterDatabase[currentTargetId];
+  if (characterDetails) {
+    activeCharacter.value = characterDetails;
+  } else {
+    // 备用方案，确保总能显示点什么
+    const fallbackCharacter = characters.value.get(currentTargetId);
+    activeCharacter.value = {
+      characterId: currentTargetId,
+      characterName: fallbackCharacter?.displayName || currentTargetId,
+      characterImageURL: '/placeholder.svg',
+      llmName: fallbackCharacter?.model || 'AI Model'
+    };
+  }
+  // ====================================================================
+
+  // 步骤 4: 【后】调用API获取回答。这个函数会触发 isLoading = true
   const answerText = await askQuestion(currentTargetId, currentQuestionText);
 
-  // 步骤 4: 如果成功获取回答
+  // 步骤 5: 如果成功获取回答，则显示并暂存 (逻辑不变)
   if (answerText) {
-    // a. 在左侧对话框中用打字机效果显示回答
-    const characterDetails = characterDatabase[currentTargetId];
-    if (characterDetails) {
-      activeCharacter.value = characterDetails;
-    }
+    // 此时 activeCharacter 已经是正确的了，我们只需要更新对话内容
     currentDialogue.text = answerText;
     currentDialogue.characterId = currentTargetId;
     startTypingEffect(answerText);
     canContinue.value = false;
 
-    // b. 将【本次】的问答数据存入 pendingQA 中，等待下一次行动时再记录
+    // 将【本次】的问答数据存入 pendingQA 中
     pendingQA.value = {
       question: {
         type: 'question',
@@ -875,7 +892,7 @@ const handleAskQuestion = async () => {
       },
     };
   } else {
-    // 如果提问失败，直接在历史记录中显示一条系统错误消息
+    // 提问失败的处理 (逻辑不变)
     addHistoryEntry({
         type: 'system',
         content: `向 ${currentTargetId} 的提问失败，请重试。`
@@ -1171,9 +1188,16 @@ onUnmounted(() => {
 <style scoped>
 /* 严格按照新设计图的样式 */
 :root {
-  --sidebar-bg: rgba(30, 41, 59, 0.6);
-  --sidebar-section-bg: rgba(15, 23, 42, 0.6);
-  --sidebar-border-color: rgba(71, 85, 105, 0.5);
+  /* (关键修改) 侧边栏整体背景：使用更亮的灰蓝色(rgb(71, 85, 105))，并降低透明度，让其更通透 */
+  --sidebar-bg: rgba(71, 85, 105, 0.5);
+
+  /* (关键修改) 卡片背景：使用比底色稍暗且更不透明的颜色，营造层次感 */
+  --sidebar-section-bg: rgba(51, 65, 85, 0.7);
+
+  /* (关键修改) 边框颜色：同样调整为更亮的色调 */
+  --sidebar-border-color: rgba(100, 116, 139, 0.4);
+
+  /* 其他颜色变量保持不变 */
   --text-primary: #e2e8f0;
   --text-secondary: #94a3b8;
   --accent-color: #6366f1;
@@ -1271,6 +1295,9 @@ onUnmounted(() => {
 .right-ui-container {
   display: flex;
   transition: width 0.3s ease;
+  background: rgba(41, 51, 66, 0.7); /* 更亮的灰蓝色，70%不透明度 */
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(100, 116, 139, 0.4);
 }
 
 .right-ui-container.is-hidden {

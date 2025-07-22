@@ -2,6 +2,8 @@
 
 import { ref, readonly, computed } from 'vue'
 import axios from 'axios'
+// 1. (新增) 导入 useGameData 以获取角色数据库
+import { useGameData } from './useGameData'
 
 // --- 数据结构定义 ---
 export interface Character {
@@ -37,6 +39,9 @@ export function useGame() {
   const error = ref<string | null>(null)
   const currentAct = ref(1) // 新增：当前幕次
   const questionCount = ref(0) // 新增：当前幕次的提问计数
+
+  // (新增) 在 useGame 作用域内获取一次 characterDatabase
+  const { characterDatabase } = useGameData()
   
   // 独白相关状态
   const monologueProgress = ref({ current: 0, total: 0 })
@@ -66,34 +71,44 @@ export function useGame() {
   const currentSentenceIndex = ref(0)
 
   /**
-   * 根据后端数据构建角色映射表, 自动分配角色
+   * (已更新 - 最终版) 根据后端数据和 useGameData.ts 的数据源来构建角色映射表
    */
   const setupCharacters = (allCharacters: string[], assignedPlayerRole: string) => {
-    const newCharacters = new Map<string, Character>()
-    playerCharacterId.value = assignedPlayerRole
-  
-    // AI模型分配
-    const aiModels = ['qwen', 'openai', 'deepseek', 'kimi']
-    let aiModelIndex = 0
+    const newCharacters = new Map<string, Character>();
+    playerCharacterId.value = assignedPlayerRole;
 
     allCharacters.forEach(charId => {
-      const isPlayer = charId === assignedPlayerRole
-      let model = undefined;
-      let displayName = charId;
+      const isPlayer = charId === assignedPlayerRole;
 
-      if (!isPlayer) {
-          model = aiModels[aiModelIndex % aiModels.length];
-          displayName = `${charId} (${model})`
-          aiModelIndex++;
-      } else {
-          displayName = `${charId} (我)`
+      // 从我们的"数据源"中查找该角色的详细信息
+      const characterData = characterDatabase[charId];
+
+      let displayName = charId;
+      let model = undefined;
+
+      if (characterData) {
+        // 如果找到了角色数据，使用预设的 llmName
+        model = characterData.llmName;
       }
 
-      newCharacters.set(charId, { id: charId, displayName, isPlayer, model })
-    })
-    characters.value = newCharacters
-    console.log('[Game] 角色信息初始化完成:', characters.value)
-  }
+      if (isPlayer) {
+        displayName = `${charId} (我)`;
+      } else if (model) {
+        // 如果不是玩家且有模型名称，则拼接
+        displayName = `${charId} (${model})`;
+      }
+
+      newCharacters.set(charId, {
+        id: charId,
+        displayName,
+        isPlayer,
+        model
+      });
+    });
+
+    characters.value = newCharacters;
+    console.log('[Game] 角色信息已根据数据源正确初始化:', characters.value);
+  };
 
   const startGame = async (scriptId: string, _humanPlayerId: string) => {
     isLoading.value = true
@@ -253,7 +268,8 @@ const advanceMonologue = (): MonologueEntry | null => {
           action_type: 'qna',
           character_id: targetCharacterId,
           question: question,
-          questioner_id: playerCharacterId.value
+          questioner_id: playerCharacterId.value,
+          is_public: true 
         }
       );
 
