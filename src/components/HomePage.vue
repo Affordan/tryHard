@@ -1,6 +1,11 @@
 <template>
   <div class="home-page">
     <!-- Background Pattern -->
+    <div class="background-blobs">
+      <div class="blob purple"></div>
+      <div class="blob yellow"></div>
+      <div class="blob blue"></div>
+    </div>
     <div class="background-pattern"></div>
 
     <div class="content-wrapper">
@@ -11,9 +16,9 @@
             <!-- Logo -->
             <div class="logo-section">
               <div class="logo-icon">
-                <span>迷</span>
+                <span>Take</span>
               </div>
-              <h1 class="logo-title">迷雾剧场</h1>
+              <h1 class="logo-title">her script</h1>
             </div>
 
             <!-- Search -->
@@ -34,12 +39,12 @@
 
             <!-- User Menu -->
             <div class="user-menu">
-              <div class="user-button">
+              <button @click="goToProfile" class="user-button">
                 <div class="user-avatar">
                   <span>玩家</span>
                 </div>
                 <span class="user-name">神秘玩家</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -66,8 +71,22 @@
         <div class="container">
           <div class="content-layout">
             <!-- Scripts Grid -->
-            <div :class="['scripts-section', { 'with-detail': selectedScript }]">
-              <div class="scripts-grid">
+            <div class="scripts-section">
+              <!-- Loading State -->
+              <div v-if="isLoading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">正在加载剧本数据...</p>
+              </div>
+
+              <!-- Error State -->
+              <div v-else-if="error" class="error-container">
+                <div class="error-icon">⚠️</div>
+                <p class="error-text">{{ error }}</p>
+                <button @click="fetchScripts" class="retry-button">重试</button>
+              </div>
+
+              <!-- Scripts Grid -->
+              <div v-else class="scripts-grid">
                 <div
                   v-for="script in paginatedScripts"
                   :key="script.id"
@@ -77,7 +96,7 @@
                   <!-- Cover Image -->
                   <div class="script-cover">
                     <img
-                      :src="script.cover || '/placeholder.svg'"
+                      :src="getFullImageUrl(script.cover)"
                       :alt="script.title"
                       class="cover-image"
                     />
@@ -138,11 +157,14 @@
                 </div>
               </div>
 
+              <!-- 调试信息 -->
+  
+
               <!-- Pagination -->
-              <div v-if="totalPages > 1" class="pagination">
+              <div v-if="!isLoading && !error && scripts.length > 0" class="pagination">
                 <button
                   @click="setCurrentPage(Math.max(1, currentPage - 1))"
-                  :disabled="currentPage === 1"
+                  :disabled="currentPage === 1 || isLoading"
                   class="pagination-button"
                 >
                   <svg class="pagination-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -153,9 +175,10 @@
 
                 <div class="page-numbers">
                   <button
-                    v-for="page in totalPages"
+                    v-for="page in Math.max(1, totalPages)"
                     :key="page"
                     @click="setCurrentPage(page)"
+                    :disabled="isLoading"
                     :class="['page-button', { active: currentPage === page }]"
                   >
                     {{ page }}
@@ -163,8 +186,8 @@
                 </div>
 
                 <button
-                  @click="setCurrentPage(Math.min(totalPages, currentPage + 1))"
-                  :disabled="currentPage === totalPages"
+                  @click="setCurrentPage(Math.min(Math.max(1, totalPages), currentPage + 1))"
+                  :disabled="currentPage >= Math.max(1, totalPages) || isLoading"
                   class="pagination-button"
                 >
                   下一页
@@ -173,110 +196,23 @@
                   </svg>
                 </button>
               </div>
-            </div>
 
-            <!-- Detail Panel -->
-            <div v-if="selectedScript" class="detail-panel">
-              <div class="detail-card">
-                <div class="detail-content">
-                  <!-- Cover and Title -->
-                  <div class="detail-header">
-                    <img
-                      :src="selectedScript.cover || '/placeholder.svg'"
-                      :alt="selectedScript.title"
-                      class="detail-cover"
-                    />
-                    <h2 class="detail-title">{{ selectedScript.title }}</h2>
-                    <p class="detail-author">作者：{{ selectedScript.author }}</p>
-                    <div class="detail-tags">
-                      <span
-                        v-for="tag in selectedScript.tags"
-                        :key="tag"
-                        class="detail-tag"
-                      >
-                        {{ tag }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Description -->
-                  <div class="detail-section">
-                    <h3 class="section-title">故事简介</h3>
-                    <p class="section-content">{{ selectedScript.description }}</p>
-                  </div>
-
-                  <!-- Characters -->
-                  <div class="detail-section">
-                    <h3 class="section-title">角色列表</h3>
-                    <div class="characters-list">
-                      <div
-                        v-for="(character, index) in selectedScript.characters"
-                        :key="index"
-                        class="character-item"
-                      >
-                        <div class="character-avatar">
-                          <span>{{ character.name[0] }}</span>
-                        </div>
-                        <div class="character-info">
-                          <p class="character-name">{{ character.name }}</p>
-                          <p class="character-desc">{{ character.description }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Stats -->
-                  <div class="detail-section">
-                    <div class="detail-stats">
-                      <div class="detail-stat">
-                        <span class="stat-label">
-                          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                          </svg>
-                          人数
-                        </span>
-                        <span class="stat-value">{{ selectedScript.players }}</span>
-                      </div>
-                      <div class="detail-stat">
-                        <span class="stat-label">难度</span>
-                        <div class="difficulty-stars">
-                          <svg
-                            v-for="i in 5"
-                            :key="i"
-                            :class="['star', { filled: i <= selectedScript.difficulty }]"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"></polygon>
-                          </svg>
-                        </div>
-                      </div>
-                      <div class="detail-stat">
-                        <span class="stat-label">
-                          <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12,6 12,12 16,14"></polyline>
-                          </svg>
-                          时长
-                        </span>
-                        <span class="stat-value">{{ selectedScript.duration }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Start Game Button -->
-                  <button @click="startGame" class="start-game-button">
-                    <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <polygon points="5,3 19,12 5,21"></polygon>
-                    </svg>
-                    开始游戏
-                  </button>
-                </div>
+              <!-- 分页状态信息 -->
+              <div v-if="!isLoading && !error && scripts.length > 0" class="pagination-info">
+                <span class="pagination-status">
+                  第 {{ currentPage }} 页，共 {{ Math.max(1, totalPages) }} 页 |
+                  显示 {{ scripts.length }} 个剧本
+                </span>
               </div>
             </div>
+
+            <!-- Script Dossier -->
+            <ScriptDossier
+              :script="selectedScript"
+              :visible="!!selectedScript"
+              @close="selectedScript = null"
+              @startGame="startGame"
+            />
           </div>
         </div>
       </div>
@@ -287,6 +223,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+import ScriptDossier from './ScriptDossier.vue'
+import { useGameData } from '../composables/useGameData'
 
 // 接口定义
 interface Script {
@@ -305,171 +244,147 @@ interface Script {
     avatar: string
     description: string
   }[]
+  created_at?: string
+  updated_at?: string
+}
+
+// API 响应接口
+interface ScriptsResponse {
+  scripts: Script[]
+  total_pages: number
+  current_page: number
 }
 
 // 路由
 const router = useRouter()
+const { characterDatabase } = useGameData()
 
 // 响应式数据
 const selectedCategory = ref('All')
 const selectedScript = ref<Script | null>(null)
 const searchQuery = ref('')
 const currentPage = ref(1)
+const pageSize = ref(6)
+const scripts = ref<Script[]>([])
+const totalPages = ref(0)
+const isLoading = ref(false)
+const error = ref<string | null>(null)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
-const SCRIPTS_PER_PAGE = 8
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 
-// 剧本数据
-const scripts: Script[] = [
-  {
-    id: "1",
-    title: "午夜图书馆",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Mystery",
-    tags: ["悬疑", "本格", "微恐"],
-    players: "6人 (3男3女)",
-    difficulty: 4,
-    duration: "约4小时",
-    author: "神秘作者",
-    description: "深夜的图书馆中，一位管理员神秘失踪。六位访客被困在这座古老的建筑中，必须在天亮前找出真相。每个人都有不可告人的秘密，而真相往往比想象中更加黑暗...",
-    characters: [
-      { name: "图书管理员", avatar: "/placeholder.svg?height=60&width=60", description: "知识渊博但性格孤僻的管理员" },
-      { name: "文学教授", avatar: "/placeholder.svg?height=60&width=60", description: "优雅的中年教授，对古籍情有独钟" },
-      { name: "神秘访客", avatar: "/placeholder.svg?height=60&width=60", description: "身份不明的年轻人，似乎在寻找什么" },
-    ],
-  },
-  {
-    id: "2",
-    title: "雾都疑案",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Hardcore",
-    tags: ["硬核", "推理", "维多利亚"],
-    players: "7人 (4男3女)",
-    difficulty: 5,
-    duration: "约5小时",
-    author: "推理大师",
-    description: "19世纪的伦敦，浓雾笼罩的街道上发生了一起离奇的谋杀案。作为苏格兰场的精英侦探们，你们必须在48小时内破解这个看似不可能的密室杀人案...",
-    characters: [
-      { name: "首席探长", avatar: "/placeholder.svg?height=60&width=60", description: "经验丰富的老探长，直觉敏锐" },
-      { name: "法医专家", avatar: "/placeholder.svg?height=60&width=60", description: "年轻的法医，擅长尸体检验" },
-    ],
-  },
-  {
-    id: "3",
-    title: "校园七不思议",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Horror",
-    tags: ["恐怖", "校园", "灵异"],
-    players: "5人 (2男3女)",
-    difficulty: 3,
-    duration: "约3小时",
-    author: "恐怖小说家",
-    description: "深夜的学校里流传着七个恐怖传说。当五位学生因为各种原因被困在校园中过夜时，他们发现这些传说正在一个个变成现实...",
-    characters: [
-      { name: "学生会长", avatar: "/placeholder.svg?height=60&width=60", description: "责任感强的优等生" },
-      { name: "问题学生", avatar: "/placeholder.svg?height=60&width=60", description: "叛逆的不良少年，实际上很善良" },
-    ],
-  },
-  {
-    id: "4",
-    title: "豪门恩怨",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Emotional",
-    tags: ["情感", "家族", "商战"],
-    players: "8人 (4男4女)",
-    difficulty: 3,
-    duration: "约4小时",
-    author: "情感编剧",
-    description: "富豪家族的继承人突然离世，巨额遗产的分配引发了家族内部的明争暗斗。每个人都有继承的理由，也都有杀人的动机...",
-    characters: [
-      { name: "大少爷", avatar: "/placeholder.svg?height=60&width=60", description: "表面风光的继承人，内心充满压力" },
-      { name: "管家", avatar: "/placeholder.svg?height=60&width=60", description: "服务家族多年的忠诚管家" },
-    ],
-  },
-  {
-    id: "5",
-    title: "太空站危机",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Mystery",
-    tags: ["科幻", "太空", "生存"],
-    players: "6人 (3男3女)",
-    difficulty: 4,
-    duration: "约4小时",
-    author: "科幻作家",
-    description: "2087年，国际空间站上的科研人员发现了一个惊人的秘密。但随着通讯中断，他们意识到危险不仅来自外太空，更来自身边的同伴...",
-    characters: [
-      { name: "指挥官", avatar: "/placeholder.svg?height=60&width=60", description: "经验丰富的太空站指挥官" },
-      { name: "科学家", avatar: "/placeholder.svg?height=60&width=60", description: "专注研究的天体物理学家" },
-    ],
-  },
-  {
-    id: "6",
-    title: "古堡之谜",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Joyful",
-    tags: ["欢乐", "古堡", "轻松"],
-    players: "6人 (3男3女)",
-    difficulty: 2,
-    duration: "约3小时",
-    author: "喜剧编剧",
-    description: "一群朋友受邀到古堡度假，却发现这里隐藏着一个有趣的宝藏谜题。在轻松愉快的氛围中，大家需要通过合作和推理来解开古堡的秘密...",
-    characters: [
-      { name: "古堡主人", avatar: "/placeholder.svg?height=60&width=60", description: "幽默风趣的古堡继承人" },
-      { name: "历史学家", avatar: "/placeholder.svg?height=60&width=60", description: "对古代历史充满热情的学者" },
-    ],
-  },
-  {
-    id: "7",
-    title: "深海实验室",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Horror",
-    tags: ["恐怖", "深海", "实验"],
-    players: "7人 (4男3女)",
-    difficulty: 4,
-    duration: "约5小时",
-    author: "恐怖大师",
-    description: "深海研究站中，科学家们正在进行一项秘密实验。当实验失控时，他们发现自己被困在了海底，而更可怕的是，实验体似乎还活着...",
-    characters: [
-      { name: "首席科学家", avatar: "/placeholder.svg?height=60&width=60", description: "野心勃勃的研究者" },
-      { name: "安全主管", avatar: "/placeholder.svg?height=60&width=60", description: "负责实验室安全的退役军人" },
-    ],
-  },
-  {
-    id: "8",
-    title: "时光咖啡馆",
-    cover: "/placeholder.svg?height=300&width=200",
-    category: "Emotional",
-    tags: ["情感", "时光", "温馨"],
-    players: "5人 (2男3女)",
-    difficulty: 2,
-    duration: "约3小时",
-    author: "温情作家",
-    description: "一家神奇的咖啡馆，据说能让人回到过去的某个时刻。五位顾客各自带着遗憾来到这里，他们能否在这里找到内心的平静...",
-    characters: [
-      { name: "咖啡馆老板", avatar: "/placeholder.svg?height=60&width=60", description: "神秘而温和的老板娘" },
-      { name: "失恋青年", avatar: "/placeholder.svg?height=60&width=60", description: "刚刚失恋的大学生" },
-    ],
+// 定义后端静态资源基地址常量
+const BACKEND_STATIC_URL = 'http://127.0.0.1:8000'
+
+// 创建URL拼接辅助方法
+const getFullImageUrl = (path: string | undefined | null): string => {
+  if (!path) {
+    return '/placeholder.svg' // 无路径时返回占位图
   }
-]
+  if (path.startsWith('http')) {
+    return path // 已是完整URL直接返回
+  }
+  // 拼接后端地址和相对路径
+  return `${BACKEND_STATIC_URL}${path}`
+}
+
+// 处理脚本数据，确保角色头像路径正确
+const processScriptData = (script: Script): Script => {
+  // 如果脚本有角色数据，更新头像路径
+  if (script.characters && script.characters.length > 0) {
+    script.characters = script.characters.map(character => {
+      // 从角色数据库中查找对应的角色信息
+      const characterData = characterDatabase[character.name]
+      if (characterData) {
+        // 使用本地的头像路径
+        return {
+          ...character,
+          avatar: characterData.characterImageURL
+        }
+      }
+      return character
+    })
+  }
+  return script
+}
+
+// API 调用函数
+const fetchScripts = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
+
+    const params = new URLSearchParams({
+      page: currentPage.value.toString(),
+      page_size: pageSize.value.toString()
+    })
+
+    // 添加分类过滤
+    if (selectedCategory.value !== 'All') {
+      params.append('category', selectedCategory.value)
+    }
+
+    // 添加搜索查询
+    if (searchQuery.value.trim()) {
+      params.append('search', searchQuery.value.trim())
+    }
+
+    const apiUrl = `${API_BASE_URL}/scripts?${params}`
+    console.log('正在调用 API:', apiUrl)
+    console.log('请求参数:', {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      category: selectedCategory.value !== 'All' ? selectedCategory.value : undefined,
+      search: searchQuery.value.trim() || undefined
+    })
+
+    const response = await axios.get<ScriptsResponse>(apiUrl)
+
+    console.log('API 响应:', response.data)
+
+    // 处理不同的API响应格式
+    let scriptsData: Script[] = []
+    let totalPagesData = 1
+    let currentPageData = currentPage.value;
+
+    if (response.data.scripts) {
+      // 格式1: { scripts: [], total_pages: number, current_page: number }
+      scriptsData = response.data.scripts
+      totalPagesData = response.data.total_pages || 1
+      
+    } else if (Array.isArray(response.data)) {
+      // 格式2: 直接返回数组，需要前端分页
+      scriptsData = response.data
+      totalPagesData = Math.ceil(scriptsData.length / pageSize.value)
+      
+    } else {
+      // 其他格式，尝试直接使用
+      scriptsData = response.data.scripts || []
+      totalPagesData = 1
+      currentPageData = 1
+    }
+
+ 
+
+    // 处理脚本数据，确保角色头像路径正确
+    scripts.value = scriptsData.map(processScriptData)
+    totalPages.value = totalPagesData
+    currentPage.value = currentPageData
+
+  } catch (err) {
+    error.value = '获取剧本数据失败，请稍后重试'
+    console.error('API 调用失败:', err)
+    scripts.value = []
+    totalPages.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // 计算属性
-const filteredScripts = computed(() => {
-  return scripts.filter((script) => {
-    const matchesCategory = selectedCategory.value === 'All' || script.category === selectedCategory.value
-    const matchesSearch =
-      script.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      script.author.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      script.tags.some((tag) => tag.toLowerCase().includes(searchQuery.value.toLowerCase()))
-    return matchesCategory && matchesSearch
-  })
-})
-
-const totalPages = computed(() => Math.ceil(filteredScripts.value.length / SCRIPTS_PER_PAGE))
-
 const paginatedScripts = computed(() => {
-  const startIndex = (currentPage.value - 1) * SCRIPTS_PER_PAGE
-  return filteredScripts.value.slice(startIndex, startIndex + SCRIPTS_PER_PAGE)
+  return scripts.value
 })
 
 // 方法
@@ -477,11 +392,13 @@ const handleCategoryChange = (category: string) => {
   selectedCategory.value = category
   currentPage.value = 1
   selectedScript.value = null
+  fetchScripts()
 }
 
 const handleSearchChange = () => {
   currentPage.value = 1
   selectedScript.value = null
+  fetchScripts()
 }
 
 const setSelectedScript = (script: Script) => {
@@ -490,31 +407,172 @@ const setSelectedScript = (script: Script) => {
 
 const setCurrentPage = (page: number) => {
   currentPage.value = page
+  fetchScripts()
 }
 
 const startGame = () => {
   if (selectedScript.value) {
-    // 跳转到游戏界面，传递选中的剧本信息
+    // 跳转到等待界面，传递选中的剧本信息
     router.push({
-      name: 'game',
+      name: 'wait',
       params: { scriptId: selectedScript.value.id }
     })
   }
 }
+
+const goToProfile = () => {
+  router.push({ name: 'profile' })
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchScripts()
+})
 </script>
 
 <style scoped>
+
 .home-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  /* 呼吸灯背景设置 */
+  overflow: hidden;
+  background-color: #0f1c2c;
   position: relative;
+  overflow-y: auto;
 }
+/* 在 <style> 区域中 - 添加这些新样式 */
+
+.background-blobs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* 将它放置在基础背景之上 */
+}
+
+.blob {
+  position: absolute; /* 使用绝对定位，让它们可以自由移动 */
+  border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; /* 圆形 */
+  /* 使用模糊滤镜来模拟柔和的边缘，效果类似径向渐变 */
+  filter: blur(30px);
+  /* 这是一个给浏览器的优化提示，告诉它这两个属性即将改变 */
+  will-change: transform, opacity, border-radius;
+  animation: morph 8s ease-in-out infinite;
+  transform-origin: center center;
+}
+@keyframes morph {
+  0%, 100% {
+    border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%;
+  }
+  50% {
+    border-radius: 30% 70% 40% 60% / 60% 50% 50% 40%;
+  }
+}
+/* 定义每个色块的颜色、尺寸和动画 */
+.blob.purple {
+  width: 600px;
+  height: 600px;
+  background: rgba(80, 31, 214, 0.3);
+  animation: move-purple 5s infinite cubic-bezier(0.4, 0, 0.6, 1),
+             morph 8s ease-in-out infinite;
+}
+
+.blob.yellow {
+  width: 800px;
+  height: 700px;
+  background: rgba(232, 183, 58, 0.2);
+  animation: move-yellow 8s infinite cubic-bezier(0.4, 0, 0.6, 1),
+  morph 8s ease-in-out infinite;
+}
+
+.blob.blue {
+  width: 750px;
+  height: 450px;
+  background: rgba(48, 118, 232, 0.15);
+  animation: move-blue 10s infinite cubic-bezier(0.4, 0, 0.6, 1),
+             morph 8s ease-in-out infinite;
+}
+
+@keyframes move-purple {
+  0%, 100% {
+    /* 初始状态：增加一个初始旋转角度 */
+    transform: translate(10vw, 10vh) scale(1) rotate(-15deg);
+    opacity: 0.3;
+  }
+  50% {
+    /* 中间状态：改变位置、缩放，并旋转到另一个角度 */
+    transform: translate(25vw, -20vh) scale(1.2) rotate(20deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes move-yellow {
+  0%, 100% {
+    transform: translate(80vw, 70vh) scale(1) rotate(10deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(60vw, 90vh) scale(0.8) rotate(-25deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes move-blue {
+  0%, 100% {
+    transform: translate(40vw, 20vh) scale(1) rotate(5deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(50vw, 30vh) scale(1.3) rotate(30deg);
+    opacity: 0.25;
+  }
+}
+
+/* 调整内容的 z-index 以确保它显示在最上层 */
+.content-wrapper {
+  position: relative;
+  z-index: 10;
+}
+
+.background-pattern {
+  position: absolute;
+  inset: 0;
+  /* 提升 z-index，让它位于色块和内容之间 */
+  z-index: 2;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23A5B4FC' fillOpacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: pattern-breathe 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
+}
+
 
 .background-pattern {
   position: absolute;
   inset: 0;
   opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fillRule='evenodd'%3E%3Cg fill='%23A5B4FC' fillOpacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: pattern-breathe 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes pattern-breathe {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    opacity: 0.06;
+    transform: scale(1.01) rotate(0.5deg);
+  }
+  50% {
+    opacity: 0.08;
+    transform: scale(1.02) rotate(1deg);
+  }
+  75% {
+    opacity: 0.06;
+    transform: scale(1.01) rotate(0.5deg);
+  }
 }
 
 .content-wrapper {
@@ -630,11 +688,17 @@ const startGame = () => {
   border-radius: 12px;
   color: #cbd5e1;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  background: transparent;
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 .user-button:hover {
   background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+  transform: translateY(-1px);
 }
 
 .user-avatar {
@@ -701,17 +765,11 @@ const startGame = () => {
 }
 
 .content-layout {
-  display: flex;
-  gap: 32px;
+  display: block;
 }
 
 .scripts-section {
-  transition: all 0.5s ease;
   width: 100%;
-}
-
-.scripts-section.with-detail {
-  width: 66.666667%;
 }
 
 .scripts-grid {
@@ -719,6 +777,75 @@ const startGame = () => {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(165, 180, 252, 0.2);
+  border-top: 4px solid #a5b4fc;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #cbd5e1;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Error State */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-text {
+  color: #f87171;
+  font-size: 16px;
+  margin: 0 0 24px 0;
+}
+
+.retry-button {
+  padding: 12px 24px;
+  background: linear-gradient(to right, #6366f1, #a855f7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* Script Card */
@@ -806,17 +933,69 @@ const startGame = () => {
 }
 
 .tag {
-  padding: 4px 8px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  will-change: transform, box-shadow;
+
+  /* 统一的青色系配色方案 */
+  background: linear-gradient(135deg,
+    rgba(6, 182, 212, 0.18) 0%,
+    rgba(14, 165, 233, 0.12) 50%,
+    rgba(59, 130, 246, 0.15) 100%);
+  color: #67e8f9;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  box-shadow:
+    0 2px 8px rgba(6, 182, 212, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: left;
 }
 
 .tag:hover {
-  background: rgba(16, 185, 129, 0.2);
+  transform: translateY(-3px) scale(1.08);
+  background: linear-gradient(135deg,
+    rgba(6, 182, 212, 0.28) 0%,
+    rgba(14, 165, 233, 0.22) 50%,
+    rgba(59, 130, 246, 0.25) 100%);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow:
+    0 8px 25px rgba(6, 182, 212, 0.15),
+    0 4px 12px rgba(14, 165, 233, 0.1),
+    0 0 30px rgba(6, 182, 212, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: #a7f3d0;
+}
+
+.tag:hover::before {
+  left: 100%;
+}
+
+.tag:active {
+  transform: translateY(-1px) scale(1.05);
+  transition: all 0.1s ease;
 }
 
 .script-stats {
@@ -921,204 +1100,21 @@ const startGame = () => {
   border-color: transparent;
 }
 
-/* Detail Panel */
-.detail-panel {
-  width: 33.333333%;
-  transition: all 0.5s ease;
-}
-
-.detail-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-  position: sticky;
-  top: 24px;
-}
-
-.detail-content {
-  padding: 24px;
-}
-
-.detail-header {
+/* 分页状态信息 */
+.pagination-info {
   text-align: center;
-  margin-bottom: 24px;
+  margin-top: 16px;
 }
 
-.detail-cover {
-  width: 144px;
-  height: 208px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin: 0 auto 16px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-.detail-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f1f5f9;
-  margin: 0 0 8px 0;
-}
-
-.detail-author {
-  font-size: 14px;
-  color: #94a3b8;
-  margin: 0 0 12px 0;
-}
-
-.detail-tags {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.detail-tag {
-  padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.detail-section {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #f1f5f9;
-  margin: 0 0 12px 0;
-}
-
-.section-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #cbd5e1;
-  margin: 0;
-}
-
-.characters-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.character-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 8px;
-  backdrop-filter: blur(4px);
-}
-
-.character-avatar {
-  width: 44px;
-  height: 44px;
-  background: #6366f1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.character-info {
-  flex: 1;
-}
-
-.character-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #f1f5f9;
-  margin: 0 0 4px 0;
-}
-
-.character-desc {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
-}
-
-.detail-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detail-stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.pagination-status {
   color: #94a3b8;
   font-size: 14px;
 }
 
-.stat-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
-.stat-value {
-  color: #cbd5e1;
-  font-weight: 500;
-}
-
-.start-game-button {
-  width: 100%;
-  padding: 12px 24px;
-  background: linear-gradient(to right, #10b981, #14b8a6);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-.start-game-button:hover {
-  background: linear-gradient(to right, #059669, #0d9488);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-  transform: scale(1.02);
-}
-
-.button-icon {
-  width: 20px;
-  height: 20px;
-}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .content-layout {
-    flex-direction: column;
-  }
-
-  .scripts-section,
-  .scripts-section.with-detail {
-    width: 100%;
-  }
-
-  .detail-panel {
-    width: 100%;
-  }
-
   .scripts-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
@@ -1145,4 +1141,6 @@ const startGame = () => {
     justify-content: center;
   }
 }
+
+
 </style>

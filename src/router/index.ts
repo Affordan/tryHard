@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/components/HomePage.vue'
 import GalgameInterface from '@/components/GalgameInterface.vue'
+import UserProfile from '@/components/UserProfile.vue'
+import GameWait from '@/components/GameWait.vue'
 
 const routes = [
   {
@@ -12,11 +14,27 @@ const routes = [
     }
   },
   {
+    path: '/wait/:scriptId?',
+    name: 'wait',
+    component: GameWait,
+    meta: {
+      title: '等待匹配 - 迷雾剧场'
+    }
+  },
+  {
     path: '/game/:scriptId?',
     name: 'game',
     component: GalgameInterface,
     meta: {
       title: '游戏中 - 迷雾剧场'
+    }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: UserProfile,
+    meta: {
+      title: '个人中心 - 迷雾剧场'
     }
   },
   {
@@ -32,7 +50,7 @@ const router = createRouter({
 })
 
 // 路由守卫 - 设置页面标题
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   if (to.meta?.title) {
     document.title = to.meta.title as string
   }

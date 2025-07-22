@@ -3,6 +3,7 @@ export interface CharacterData {
   characterName: string
   characterRole: string
   characterImageURL: string
+  portraitImageURL: string // 新增：人物立绘图片路径
   llmName: string
   llmProvider: string
   themeColor: string
@@ -32,79 +33,112 @@ export interface ScriptScene {
 }
 
 export function useGameData() {
-  // 角色数据库
+  // (已更新) 角色数据库 - 使用中文名作为ID，增加立绘路径
   const characterDatabase: Record<string, CharacterData> = {
-    detective: {
-      characterId: "detective",
-      characterName: "夏洛克·福尔摩斯",
-      characterRole: "名侦探",
-      characterImageURL: "/placeholder.svg?height=600&width=400&text=Detective+Holmes",
+    "朱大强": {
+      characterId: "朱大强",
+      characterName: "朱大强",
+      characterRole: "父亲", // 请根据剧本填写正确角色
+      characterImageURL: "/portraits/朱大强.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱大强.png", // 指向 public/portraits/朱大强.png
+      llmName: "Qwen-Max", // 示例
+      llmProvider: "Alibaba",
+      themeColor: "#ff6b6b",
+      characterMood: "sad",
+      sceneId: "home",
+      // ... (请补充其他信息)
+    },
+    "朱丰翰": {
+      characterId: "朱丰翰",
+      characterName: "朱丰翰",
+      characterRole: "国企员工",
+      characterImageURL: "/portraits/朱丰翰.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱丰翰.png", // 指向 public/portraits/朱丰翰.png
       llmName: "DeepSeek-V3",
       llmProvider: "DeepSeek",
       themeColor: "#2c3e50",
-      characterMood: "analytical",
-      sceneId: "detective_office",
-      backstory: "世界著名的咨询侦探，以其敏锐的观察力和逻辑推理能力闻名。目前正在调查一起复杂的谋杀案。",
-      alibi: "案发当晚在办公室整理案件资料，有房东太太可以证明。",
-      secrets: ["正在暗中调查一个犯罪集团", "发现了受害者与某个重要人物的关系"],
-      relationships: {
-        "doctor_gpt": "多年的搭档和朋友",
-        "doctor_qwen": "专业上的合作伙伴"
-      },
-      personality: ["理性", "观察敏锐", "有时显得冷漠", "追求真相"]
+      characterMood: "thoughtful",
+      sceneId: "home",
+      // ...
     },
-    doctor_gpt: {
-      characterId: "doctor_gpt",
-      characterName: "华生医生",
-      characterRole: "医学专家",
-      characterImageURL: "/placeholder.svg?height=600&width=400&text=Dr+Watson+GPT",
+    "朱丰震": {
+      characterId: "朱丰震",
+      characterName: "朱丰震",
+      characterRole: "创业者",
+      characterImageURL: "/portraits/朱丰震.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱丰震.png", // 指向 public/portraits/朱丰震.png
       llmName: "GPT-4",
       llmProvider: "OpenAI",
       themeColor: "#74b9ff",
-      characterMood: "concerned",
-      sceneId: "medical_examination_room",
-      backstory: "经验丰富的医生，福尔摩斯的长期合作伙伴。最近在医院遇到了一些奇怪的病例。",
-      alibi: "案发当晚在医院值夜班，有多名护士和病人可以证明。",
-      secrets: ["发现受害者的病历有异常", "知道某些医学实验的内幕"],
-      relationships: {
-        "detective": "最信任的朋友和搭档",
-        "doctor_qwen": "同行，但有些竞争关系"
-      },
-      personality: ["善良", "忠诚", "有医者仁心", "有时过于谨慎"]
+      characterMood: "anxious",
+      sceneId: "home",
+      // ...
     },
-    doctor_qwen: {
-      characterId: "doctor_qwen",
-      characterName: "李医生",
-      characterRole: "中医专家",
-      characterImageURL: "/placeholder.svg?height=600&width=400&text=Dr+Li+Qwen",
-      llmName: "Qwen-Max",
-      llmProvider: "Alibaba",
-      themeColor: "#ff6b6b",
-      characterMood: "thoughtful",
-      sceneId: "medical_examination_room",
-      backstory: "资深中医师，结合传统中医和现代医学。最近在研究一些古老的医学文献。",
-      alibi: "案发当晚在家研读医书，妻子可以证明，但中途外出过一小时。",
-      secrets: ["掌握一些古老的毒药知识", "与受害者有过医疗纠纷"],
-      relationships: {
-        "detective": "专业合作关系",
-        "doctor_gpt": "同行，但理念不同"
-      },
-      personality: ["深思熟虑", "传统", "有些神秘", "重视名誉"]
+    "朱玲玲": {
+      characterId: "朱玲玲",
+      characterName: "朱玲玲",
+      characterRole: "女儿",
+      characterImageURL: "/portraits/朱玲玲.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱玲玲.png", // 指向 public/portraits/朱玲玲.png
+      llmName: "Kimi",
+      llmProvider: "Moonshot",
+      themeColor: "#a855f7",
+      characterMood: "lively",
+      sceneId: "home",
+      // ...
     },
+    "许苗苗": {
+      characterId: "许苗苗",
+      characterName: "许苗苗",
+      characterRole: "医护人员",
+      characterImageURL: "/portraits/许苗苗.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/许苗苗.png", // 指向 public/portraits/许苗苗.png
+      llmName: "Claude-3",
+      llmProvider: "Anthropic",
+      themeColor: "#38b2ac",
+      characterMood: "gentle",
+      sceneId: "hospital",
+      // ...
+    }
   }
 
-  // 场景背景数据
+
+  // (已更新) 场景背景数据 - 增加四个新背景
   const sceneBackgrounds: SceneBackground[] = [
     {
       id: "detective_office",
       backgroundImageURL: "/placeholder.svg?height=800&width=1200&text=Detective+Office+Scene",
       atmosphere: "mysterious",
-      weatherEffect: "rain",
+      weatherEffect: "null",
     },
     {
       id: "medical_examination_room",
       backgroundImageURL: "/placeholder.svg?height=800&width=1200&text=Medical+Room+Scene",
       atmosphere: "clinical",
+      weatherEffect: null,
+    },
+    {
+      id: "act1_monologue_bg",
+      backgroundImageURL: "/backgrounds/act1_monologue.jpg", // 指向 public/backgrounds/act1_monologue.jpg
+      atmosphere: "mysterious",
+      weatherEffect: "null",
+    },
+    {
+      id: "act1_qna_bg",
+      backgroundImageURL: "/backgrounds/act1_qna.jpg", // 指向 public/backgrounds/act1_qna.jpg
+      atmosphere: "tense",
+      weatherEffect: null,
+    },
+    {
+      id: "act2_monologue_bg",
+      backgroundImageURL: "/backgrounds/act2_monologue.jpg", // 指向 public/backgrounds/act2_monologue.jpg
+      atmosphere: "dramatic",
+      weatherEffect: null,
+    },
+    {
+      id: "act2_qna_bg",
+      backgroundImageURL: "/backgrounds/act2_qna.jpg", // 指向 public/backgrounds/act2_qna.jpg
+      atmosphere: "confrontational",
       weatherEffect: null,
     },
   ]
