@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25轮游戏系统测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            border: none;
+            color: #333;
+            padding: 12px 24px;
+            margin: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success { background: rgba(16, 185, 129, 0.8); }
+        .error { background: rgba(239, 68, 68, 0.8); }
+        .info { background: rgba(59, 130, 246, 0.8); }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00d4aa);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        .round-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .round-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #ffd93d;
+        }
+        .round-item.completed {
+            border-left-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+        .character-info {
+            font-size: 0.9em;
+            color: #ffd93d;
+            margin-bottom: 5px;
+        }
+        .sentence-text {
+            font-size: 0.8em;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 25轮游戏系统测试</h1>
+        
+        <div class="test-section">
+            <h2>🚀 测试25轮句子系统</h2>
+            <p>这个页面将测试新的25轮句子系统，验证角色轮流发言和句子切分功能。</p>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="testStartGame()">1. 开始游戏</button>
+                <button onclick="testProcessMonologues()" id="processBtn" disabled>2. 处理独白</button>
+                <button onclick="simulateRounds()" id="simulateBtn" disabled>3. 模拟25轮</button>
+                <button onclick="testFullFlow()">🎯 完整流程测试</button>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div id="progressText">准备开始...</div>
+            
+            <div id="status"></div>
+            <pre id="response"></pre>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 25轮发言显示</h3>
+            <div class="round-display" id="roundDisplay">
+                <!-- 动态生成25轮内容 -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📖 系统说明</h3>
+            <div style="background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 8px;">
+                <p><strong>新的25轮系统工作原理：</strong></p>
+                <ul>
+                    <li>每个角色提供5句独白</li>
+                    <li>按轮次重组：第1轮所有角色说第1句，第2轮所有角色说第2句...</li>
+                    <li>总共25轮（假设5个角色 × 5句话）</li>
+                    <li>完成后自动进入Q&A阶段</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000/api/v1/langchain-game';
+        let gameState = {
+            sessionId: null,
+            availableCharacters: [],
+            unifiedQueue: [],
+            currentIndex: 0
+        };
+        
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        function showResponse(data) {
+            document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        }
+        
+        function updateProgress(current, total) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = `进度: ${current}/${total} (${percentage.toFixed(1)}%)`;
+        }
+        
+        function displayRounds(rounds) {
+            const container = document.getElementById('roundDisplay');
+            container.innerHTML = '';
+            
+            rounds.forEach((round, index) => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round-item';
+                roundDiv.innerHTML = `
+                    <div class="character-info">第${index + 1}轮 - ${round.characterId}</div>
+                    <div class="sentence-text">${round.sentence}</div>
+                `;
+                container.appendChild(roundDiv);
+            });
+        }
+        
+        async function testStartGame() {
+            try {
+                showStatus('🎮 正在开始游戏...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        script_id: 'test_script_25rounds',
+                        user_id: null
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    gameState.sessionId = data.data.session_id;
+                    gameState.availableCharacters = data.data.available_human_characters;
+                    
+                    showStatus(`✅ 游戏开始成功！找到 ${gameState.availableCharacters.length} 个角色`, 'success');
+                    document.getElementById('processBtn').disabled = false;
+                    
+                    console.log('游戏会话创建成功:', data);
+                } else {
+                    throw new Error(data.message || '游戏开始失败');
+                }
+                
+                showResponse(data);
+                
+            } catch (error) {
+                showStatus(`❌ 游戏开始失败: ${error.message}`, 'error');
+                showResponse({ error: error.message });
+                console.error('游戏开始错误:', error);
+            }
+        }
+        
+        async function testProcessMonologues() {
+            if (!gameState.sessionId) {
+                showStatus('❌ 请先开始游戏！', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('📖 正在获取并处理所有角色独白...', 'info');
+                
+                // 临时存放每个角色的句子数组
+                const characterSentencesMap = new Map();
+                
+                // 并行获取所有角色的独白
+                const promises = gameState.availableCharacters.map(async (characterId) => {
+                    const response = await fetch(`${API_BASE_URL}/session/${gameState.sessionId}/action`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action_type: 'monologue',
+                            character_id: characterId
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`获取角色 ${characterId} 独白失败`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.data.monologue_sentences) {
+                        // 切分句子
+                        const sentences = data.data.monologue_sentences
+                            .flatMap(paragraph => paragraph.split('\n').filter(s => s.trim() !== ''));
+                        
+                        characterSentencesMap.set(characterId, sentences);
+                        console.log(`角色 ${characterId} 获得 ${sentences.length} 句话`);
+                    }
+                });
+                
+                await Promise.all(promises);
+                
+                // 按轮次重组独白
+                const newQueue = [];
+                const maxSentences = 5; // 每人5句话
+                
+                for (let sentenceIndex = 0; sentenceIndex < maxSentences; sentenceIndex++) {
+                    for (const characterId of gameState.availableCharacters) {
+                        const sentences = characterSentencesMap.get(characterId);
+                        if (sentences && sentenceIndex < sentences.length) {
+                            newQueue.push({
+                                characterId: characterId,
+                                sentence: sentences[sentenceIndex]
+                            });
+                        }
+                    }
+                }
+                
+                gameState.unifiedQueue = newQueue;
+                gameState.currentIndex = 0;
+                
+                showStatus(`✅ 独白处理完成！共生成 ${newQueue.length} 轮对话`, 'success');
+                document.getElementById('simulateBtn').disabled = false;
+                
+                displayRounds(newQueue);
+                updateProgress(0, newQueue.length);
+                
+                showResponse({
+                    message: '独白重组完成',
+                    totalRounds: newQueue.length,
+                    charactersCount: gameState.availableCharacters.length,
+                    queue: newQueue.slice(0, 5) // 只显示前5轮作为示例
+                });
+                
+            } catch (error) {
+                showStatus(`❌ 处理独白失败: ${error.message}`, 'error');
+                showResponse({ error: error.message });
+                console.error('处理独白错误:', error);
+            }
+        }
+        
+        async function simulateRounds() {
+            if (gameState.unifiedQueue.length === 0) {
+                showStatus('❌ 请先处理独白！', 'error');
+                return;
+            }
+            
+            showStatus('🎭 开始模拟25轮对话...', 'info');
+            
+            // 模拟逐轮播放
+            for (let i = 0; i < gameState.unifiedQueue.length; i++) {
+                const round = gameState.unifiedQueue[i];
+                
+                // 高亮当前轮次
+                const roundItems = document.querySelectorAll('.round-item');
+                if (roundItems[i]) {
+                    roundItems[i].classList.add('completed');
+                }
+                
+                updateProgress(i + 1, gameState.unifiedQueue.length);
+                
+                console.log(`第${i + 1}轮: ${round.characterId} - ${round.sentence}`);
+                
+                // 模拟延迟
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            showStatus('🎉 25轮对话模拟完成！准备进入Q&A阶段', 'success');
+            showResponse({
+                message: '所有轮次完成',
+                totalRounds: gameState.unifiedQueue.length,
+                nextPhase: 'Q&A阶段'
+            });
+        }
+        
+        async function testFullFlow() {
+            showStatus('🚀 开始完整25轮流程测试...', 'info');
+            
+            try {
+                // 重置状态
+                gameState = {
+                    sessionId: null,
+                    availableCharacters: [],
+                    unifiedQueue: [],
+                    currentIndex: 0
+                };
+                
+                // 清空显示
+                document.getElementById('roundDisplay').innerHTML = '';
+                updateProgress(0, 0);
+                
+                // 步骤1: 开始游戏
+                await testStartGame();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 步骤2: 处理独白
+                await testProcessMonologues();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 步骤3: 模拟轮次
+                await simulateRounds();
+                
+                showStatus('🎉 完整25轮流程测试成功完成！', 'success');
+                
+            } catch (error) {
+                showStatus(`❌ 完整流程测试失败: ${error.message}`, 'error');
+                console.error('完整流程测试错误:', error);
+            }
+        }
+        
+        // 页面加载时的提示
+        window.addEventListener('load', () => {
+            showStatus('🎮 25轮游戏系统测试准备就绪！', 'info');
+            updateProgress(0, 25);
+        });
+    </script>
+</body>
+</html>

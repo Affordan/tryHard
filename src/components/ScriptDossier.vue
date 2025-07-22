@@ -160,6 +160,10 @@ const getFullImageUrl = (path: string | undefined | null): string => {
   if (path.startsWith('http')) {
     return path // 已是完整URL直接返回
   }
+  // 如果是本地 portraits 路径，直接返回
+  if (path.startsWith('/portraits/')) {
+    return path
+  }
   // 拼接后端地址和相对路径
   return `${BACKEND_STATIC_URL}${path}`
 }
@@ -593,13 +597,13 @@ const getRestText = (text: string) => {
   background: radial-gradient(circle, #8B0000 0%, #DC143C  50%, #8B0000 100%);
   cursor: pointer;
   transition: all 0.3s ease;
-  background: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg') no-repeat center center;
+  background: url('/public/print.jpg') no-repeat center center;
   background-size: cover; /* 确保背景图片完全覆盖按钮区域 */
 }
 
 .wax-seal-button:hover {
   transform: scale(1.05);
-  background-image: url('D:/workspace/jubensha2/jubenshaa/public/print.jpg');
+  background-image: url('/public/print.jpg');
 }
 
 .wax-seal-button:active {
@@ -775,7 +779,7 @@ const getRestText = (text: string) => {
 
 .character-avatar {
   width: 60px;
-  height: 60px;
+  height: 80px;
   object-fit: cover;
   border-radius: 4px;
   box-shadow:

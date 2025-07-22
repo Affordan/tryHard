@@ -12,7 +12,7 @@
         <!-- Dynamic Animated Title -->
         <div class="title-section">
           <h1 class="main-title">
-            夏洛克·福尔摩斯
+            家有儿女
           </h1>
           <h2 class="sub-title">
             {{ scriptId ? `剧本 ${scriptId}` : '雨夜杀机' }}

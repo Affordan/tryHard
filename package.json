@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .vue,.js,.ts --fix"
   },
   "dependencies": {
+    "aixo": "^0.1.2",
     "axios": "^1.10.0",
     "lucide-vue-next": "^0.525.0",
     "vue": "^3.5.17",

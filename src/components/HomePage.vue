@@ -225,6 +225,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import ScriptDossier from './ScriptDossier.vue'
+import { useGameData } from '../composables/useGameData'
 
 // 接口定义
 interface Script {
@@ -256,6 +257,7 @@ interface ScriptsResponse {
 
 // 路由
 const router = useRouter()
+const { characterDatabase } = useGameData()
 
 // 响应式数据
 const selectedCategory = ref('All')
@@ -270,10 +272,10 @@ const error = ref<string | null>(null)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
-const API_BASE_URL = 'http://192.168.1.105:8000/api/v1'
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 
 // 定义后端静态资源基地址常量
-const BACKEND_STATIC_URL = 'http://192.168.1.105:8000'
+const BACKEND_STATIC_URL = 'http://127.0.0.1:8000'
 
 // 创建URL拼接辅助方法
 const getFullImageUrl = (path: string | undefined | null): string => {
@@ -285,6 +287,26 @@ const getFullImageUrl = (path: string | undefined | null): string => {
   }
   // 拼接后端地址和相对路径
   return `${BACKEND_STATIC_URL}${path}`
+}
+
+// 处理脚本数据，确保角色头像路径正确
+const processScriptData = (script: Script): Script => {
+  // 如果脚本有角色数据，更新头像路径
+  if (script.characters && script.characters.length > 0) {
+    script.characters = script.characters.map(character => {
+      // 从角色数据库中查找对应的角色信息
+      const characterData = characterDatabase[character.name]
+      if (characterData) {
+        // 使用本地的头像路径
+        return {
+          ...character,
+          avatar: characterData.characterImageURL
+        }
+      }
+      return character
+    })
+  }
+  return script
 }
 
 // API 调用函数
@@ -345,7 +367,8 @@ const fetchScripts = async () => {
 
  
 
-    scripts.value = scriptsData
+    // 处理脚本数据，确保角色头像路径正确
+    scripts.value = scriptsData.map(processScriptData)
     totalPages.value = totalPagesData
     currentPage.value = currentPageData
 
