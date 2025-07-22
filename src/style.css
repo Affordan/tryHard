@@ -1,0 +1,63 @@
+/* Global styles */
+:root {
+  font-family: 'Microsoft YaHei', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  /* 移除全局overflow限制，允许页面滚动 */
+}
+
+#app {
+  width: 100vw;
+  min-height: 100vh;
+  /* 移除固定高度和overflow限制，允许内容自然扩展 */
+}
+
+/* 平滑滚动效果 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 28, 44, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(165, 180, 252, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(165, 180, 252, 0.5);
+}
+
+/* Firefox滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(165, 180, 252, 0.3) rgba(15, 28, 44, 0.3);
+}
