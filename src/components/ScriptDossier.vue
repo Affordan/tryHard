@@ -160,6 +160,10 @@ const getFullImageUrl = (path: string | undefined | null): string => {
   if (path.startsWith('http')) {
     return path // 已是完整URL直接返回
   }
+  // 如果是本地 portraits 路径，直接返回
+  if (path.startsWith('/portraits/')) {
+    return path
+  }
   // 拼接后端地址和相对路径
   return `${BACKEND_STATIC_URL}${path}`
 }
@@ -775,7 +779,7 @@ const getRestText = (text: string) => {
 
 .character-avatar {
   width: 60px;
-  height: 60px;
+  height: 80px;
   object-fit: cover;
   border-radius: 4px;
   box-shadow:

@@ -225,6 +225,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import ScriptDossier from './ScriptDossier.vue'
+import { useGameData } from '../composables/useGameData'
 
 // 接口定义
 interface Script {
@@ -256,6 +257,7 @@ interface ScriptsResponse {
 
 // 路由
 const router = useRouter()
+const { characterDatabase } = useGameData()
 
 // 响应式数据
 const selectedCategory = ref('All')
@@ -285,6 +287,26 @@ const getFullImageUrl = (path: string | undefined | null): string => {
   }
   // 拼接后端地址和相对路径
   return `${BACKEND_STATIC_URL}${path}`
+}
+
+// 处理脚本数据，确保角色头像路径正确
+const processScriptData = (script: Script): Script => {
+  // 如果脚本有角色数据，更新头像路径
+  if (script.characters && script.characters.length > 0) {
+    script.characters = script.characters.map(character => {
+      // 从角色数据库中查找对应的角色信息
+      const characterData = characterDatabase[character.name]
+      if (characterData) {
+        // 使用本地的头像路径
+        return {
+          ...character,
+          avatar: characterData.characterImageURL
+        }
+      }
+      return character
+    })
+  }
+  return script
 }
 
 // API 调用函数
@@ -345,7 +367,8 @@ const fetchScripts = async () => {
 
  
 
-    scripts.value = scriptsData
+    // 处理脚本数据，确保角色头像路径正确
+    scripts.value = scriptsData.map(processScriptData)
     totalPages.value = totalPagesData
     currentPage.value = currentPageData
 

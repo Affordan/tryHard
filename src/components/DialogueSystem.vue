@@ -4,7 +4,7 @@
     <div v-if="isAiProcessing" class="ai-processing-display">
       <div class="processing-content">
         <div class="processing-avatar">
-          <img :src="activeCharacter?.characterImageURL" :alt="activeCharacter?.characterName" />
+          
           <div class="processing-pulse"></div>
         </div>
         <div class="processing-text">
@@ -12,7 +12,10 @@
             <span class="processing-name">{{ activeCharacter?.characterName }}</span>
             <span class="processing-model">{{ activeCharacter?.llmName }}</span>
           </div>
-          <div class="processing-status">正在思考中...</div>
+          <div class="processing-status">
+            <img src="/portraits/bot.png" alt="AI思考中" class="thinking-bot-icon" />
+            正在思考中...
+          </div>
           <div class="processing-dots">
             <span></span><span></span><span></span>
           </div>
@@ -302,6 +305,16 @@ watch(() => props.canContinue, (newVal) => {
 .processing-status {
   color: #94a3b8;
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.thinking-bot-icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.8;
+  animation: thinking-pulse 2s infinite ease-in-out;
 }
 
 .processing-dots {
@@ -410,5 +423,17 @@ watch(() => props.canContinue, (newVal) => {
 .submit-input-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 思考中机器人图标动画 */
+@keyframes thinking-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 </style>

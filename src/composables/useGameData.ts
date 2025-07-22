@@ -39,8 +39,8 @@ export function useGameData() {
       characterId: "朱大强",
       characterName: "朱大强",
       characterRole: "父亲", // 请根据剧本填写正确角色
-      characterImageURL: "/placeholder.svg?text=朱大强", // 建议替换为角色图片路径
-      portraitImageURL: "/portraits/朱大强.png", // 指向 public/portraits/朱大强.jpg
+      characterImageURL: "/portraits/朱大强.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱大强.png", // 指向 public/portraits/朱大强.png
       llmName: "Qwen-Max", // 示例
       llmProvider: "Alibaba",
       themeColor: "#ff6b6b",
@@ -52,9 +52,8 @@ export function useGameData() {
       characterId: "朱丰翰",
       characterName: "朱丰翰",
       characterRole: "国企员工",
-      characterImageURL: "/placeholder.svg?text=朱丰翰",
-      portraitImageURL: "/portraits/朱丰翰.png", // 指向 public/portraits/朱丰翰.jpg
-
+      characterImageURL: "/portraits/朱丰翰.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱丰翰.png", // 指向 public/portraits/朱丰翰.png
       llmName: "DeepSeek-V3",
       llmProvider: "DeepSeek",
       themeColor: "#2c3e50",
@@ -66,8 +65,8 @@ export function useGameData() {
       characterId: "朱丰震",
       characterName: "朱丰震",
       characterRole: "创业者",
-      characterImageURL: "/placeholder.svg?text=朱丰震",
-      portraitImageURL: "/portraits/朱丰震.png", // 指向 public/portraits/朱丰震.jpg
+      characterImageURL: "/portraits/朱丰震.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱丰震.png", // 指向 public/portraits/朱丰震.png
       llmName: "GPT-4",
       llmProvider: "OpenAI",
       themeColor: "#74b9ff",
@@ -79,8 +78,8 @@ export function useGameData() {
       characterId: "朱玲玲",
       characterName: "朱玲玲",
       characterRole: "女儿",
-      characterImageURL: "/placeholder.svg?text=朱玲玲",
-      portraitImageURL: "/portraits/朱玲玲.png", // 指向 public/portraits/朱玲玲.jpg
+      characterImageURL: "/portraits/朱玲玲.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/朱玲玲.png", // 指向 public/portraits/朱玲玲.png
       llmName: "Kimi",
       llmProvider: "Moonshot",
       themeColor: "#a855f7",
@@ -92,8 +91,8 @@ export function useGameData() {
       characterId: "许苗苗",
       characterName: "许苗苗",
       characterRole: "医护人员",
-      characterImageURL: "/placeholder.svg?text=许苗苗",
-      portraitImageURL: "/portraits/许苗苗.png", // 指向 public/portraits/许苗苗.jpg
+      characterImageURL: "/portraits/许苗苗.png", // 更新为正确的头像路径
+      portraitImageURL: "/portraits/许苗苗.png", // 指向 public/portraits/许苗苗.png
       llmName: "Claude-3",
       llmProvider: "Anthropic",
       themeColor: "#38b2ac",

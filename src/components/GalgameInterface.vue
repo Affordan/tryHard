@@ -189,10 +189,18 @@
                 <div class="card-content" :class="{ expanded: expandedCards.character }">
                   <div class="character-profile">
                     <div class="character-header">
-                      <div class="character-avatar">👩‍⚕️</div>
+                      <div class="character-avatar">
+                        <img
+                          v-if="currentCharacterData?.characterImageURL"
+                          :src="currentCharacterData.characterImageURL"
+                          :alt="currentCharacterData.characterName"
+                          class="character-avatar-img"
+                        />
+                        <span v-else>👩‍⚕️</span>
+                      </div>
                       <div class="character-info">
-                        <div class="character-name">许苗苗</div>
-                        <div class="character-role">医生 (29岁)</div>
+                        <div class="character-name">{{ currentCharacterData?.characterName || '许苗苗' }}</div>
+                        <div class="character-role">{{ currentCharacterData?.characterRole || '医生' }} (29岁)</div>
                         <div class="character-badge">💊 医疗专家</div>
                       </div>
                     </div>
@@ -626,6 +634,14 @@ const isDropdownOpen = ref(false);
 // 新增：一个 ref 用于暂存已显示但尚未记录的问答对
 const pendingQA = ref<{ question: HistoryEntry; answer: HistoryEntry } | null>(null);
 
+// 计算属性：获取当前玩家角色的数据
+const currentCharacterData = computed(() => {
+  if (playerCharacterId.value) {
+    return characterDatabase[playerCharacterId.value] || null
+  }
+  return null
+})
+
 // 新的侧边栏控制状态
 const isSidebarVisible = ref(false);
 const isMaximized = ref(false);
@@ -824,7 +840,7 @@ const processMonologueEntry = (entry: any) => {
     
     // 清理对话框并显示提示信息
     activeCharacter.value = null; 
-    currentDialogue.text = "第一幕：所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。";
+    currentDialogue.text = `所有角色介绍完毕。现在，你们可以开始自由讨论和提问了。`;
     currentDialogue.characterId = 'system';
     startTypingEffect(currentDialogue.text);
     
@@ -1811,6 +1827,14 @@ onUnmounted(() => {
   border-radius: 50%;
   border: 2px solid rgba(99, 102, 241, 0.3);
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  overflow: hidden;
+}
+
+.character-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .character-info {
