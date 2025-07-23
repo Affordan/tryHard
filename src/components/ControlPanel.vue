@@ -14,9 +14,7 @@
     >
       {{ autoAdvance ? '⏸' : '▶' }}
     </button>
-    <button @click="$emit('showHistory')" class="control-button" title="历史记录">
-      📜
-    </button>
+ 
     <button @click="$emit('showSettings')" class="control-button" title="设置">
       ⚙️
     </button>

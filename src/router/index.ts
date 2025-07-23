@@ -3,6 +3,8 @@ import HomePage from '@/components/HomePage.vue'
 import GalgameInterface from '@/components/GalgameInterface.vue'
 import UserProfile from '@/components/UserProfile.vue'
 import GameWait from '@/components/GameWait.vue'
+import LoginPage from '@/components/Login.vue'
+import { useUserStore } from '@/composables/useUserStore'
 
 const routes = [
   {
@@ -11,6 +13,14 @@ const routes = [
     component: HomePage,
     meta: {
       title: '迷雾剧场 - 剧本杀游戏'
+    }
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginPage,
+    meta: {
+      title: '登录 - 迷雾剧场'
     }
   },
   {
@@ -34,7 +44,8 @@ const routes = [
     name: 'profile',
     component: UserProfile,
     meta: {
-      title: '个人中心 - 迷雾剧场'
+      title: '个人中心 - 迷雾剧场',
+      requiresAuth: true
     }
   },
   {
@@ -49,11 +60,23 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 设置页面标题
+// 路由守卫 - 设置页面标题和登录检查
 router.beforeEach((to, _from, next) => {
+  // 设置页面标题
   if (to.meta?.title) {
     document.title = to.meta.title as string
   }
+
+  // 检查是否需要登录
+  if (to.meta?.requiresAuth) {
+    const { isLoggedIn } = useUserStore()
+    if (!isLoggedIn.value) {
+      // 未登录，重定向到登录页面
+      next({ name: 'login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+
   next()
 })
 

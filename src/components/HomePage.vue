@@ -39,11 +39,42 @@
 
             <!-- User Menu -->
             <div class="user-menu">
-              <button @click="goToProfile" class="user-button">
-                <div class="user-avatar">
-                  <span>玩家</span>
+              <!-- 已登录用户菜单 -->
+              <div v-if="isLoggedIn" class="user-dropdown" ref="userDropdown">
+                <button @click="toggleUserMenu" class="user-button">
+                  <div class="user-avatar">
+                    <span>{{ displayName.charAt(0) }}</span>
+                  </div>
+                  <span class="user-name">{{ displayName }}</span>
+                  <svg class="dropdown-arrow" :class="{ 'rotated': isUserMenuOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="6,9 12,15 18,9"></polyline>
+                  </svg>
+                </button>
+
+                <!-- 下拉菜单 -->
+                <div v-if="isUserMenuOpen" class="dropdown-menu">
+                  <button @click="goToProfile" class="dropdown-item">
+                    <svg class="item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    个人中心
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button @click="handleLogout" class="dropdown-item logout-item">
+                    <svg class="item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16,17 21,12 16,7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    退出登录
+                  </button>
                 </div>
-                <span class="user-name">神秘玩家</span>
+              </div>
+
+              <!-- 未登录状态 -->
+              <button v-else @click="goToLogin" class="login-button">
+                登录
               </button>
             </div>
           </div>
@@ -221,11 +252,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import ScriptDossier from './ScriptDossier.vue'
 import { useGameData } from '../composables/useGameData'
+import { useUserStore } from '@/composables/useUserStore'
 
 // 接口定义
 interface Script {
@@ -255,9 +287,10 @@ interface ScriptsResponse {
   current_page: number
 }
 
-// 路由
+// 路由和用户状态
 const router = useRouter()
 const { characterDatabase } = useGameData()
+const { displayName, isLoggedIn, logout } = useUserStore()
 
 // 响应式数据
 const selectedCategory = ref('All')
@@ -269,6 +302,10 @@ const scripts = ref<Script[]>([])
 const totalPages = ref(0)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+
+// 用户菜单状态
+const isUserMenuOpen = ref(false)
+const userDropdown = ref<HTMLElement | null>(null)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
@@ -424,9 +461,41 @@ const goToProfile = () => {
   router.push({ name: 'profile' })
 }
 
+const goToLogin = () => {
+  router.push({ name: 'login' })
+}
+
+// 用户菜单相关方法
+const toggleUserMenu = () => {
+  isUserMenuOpen.value = !isUserMenuOpen.value
+}
+
+const handleLogout = () => {
+  if (confirm('确定要退出登录吗？')) {
+    logout()
+    isUserMenuOpen.value = false
+    // 可以选择跳转到登录页面或刷新当前页面
+    // router.push({ name: 'login' })
+  }
+}
+
+// 点击外部关闭菜单
+const handleClickOutside = (event: Event) => {
+  if (userDropdown.value && !userDropdown.value.contains(event.target as Node)) {
+    isUserMenuOpen.value = false
+  }
+}
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchScripts()
+  // 添加点击外部关闭菜单的事件监听器
+  document.addEventListener('click', handleClickOutside)
+})
+
+// 组件卸载时清理事件监听器
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -678,6 +747,11 @@ onMounted(() => {
 .user-menu {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.user-dropdown {
+  position: relative;
 }
 
 .user-button {
@@ -716,6 +790,98 @@ onMounted(() => {
 
 .user-name {
   font-weight: 500;
+}
+
+.dropdown-arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 180px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #a5b4fc;
+}
+
+.dropdown-item.logout-item:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.item-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(71, 85, 105, 0.3);
+  margin: 4px 0;
+}
+
+.login-button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  background: linear-gradient(135deg, #5b5bd6, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 /* Category Section */
