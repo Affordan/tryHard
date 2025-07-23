@@ -15,10 +15,10 @@
           <div class="header-content">
             <div class="logo-section">
               <div class="logo-icon">
-                <span>迷</span>
+                <span>Take</span>
               </div>
               <div class="logo-text">
-                <h1>迷雾剧场</h1>
+                <h1>her scripts</h1>
                 <p>个人中心</p>
               </div>
             </div>
@@ -55,11 +55,11 @@
             </div>
             <div class="stats-summary">
               <div class="stat-item">
-                <div class="stat-value">{{ userProfile.totalGamesPlayed }}</div>
+                <div class="stat-value">100</div>
                 <div class="stat-label">游戏场次</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value">{{ userProfile.totalHoursPlayed }}h</div>
+                <div class="stat-value">168h</div>
                 <div class="stat-label">总游戏时长</div>
               </div>
             </div>
@@ -452,8 +452,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onActivated, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onActivated, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/composables/useUserStore'
 
 // 接口定义
 interface UserProfile {
@@ -501,8 +502,9 @@ interface RecommendedScenario {
   matchReason: string
 }
 
-// 路由
+// 路由和用户状态
 const router = useRouter()
+const { currentUser, isLoggedIn } = useUserStore()
 
 // 响应式数据
 const activeTab = ref('overview')
@@ -518,16 +520,31 @@ const showTooltip = ref(false)
 const highlightedSegment = ref<string | null>(null)
 const isLoading = ref(true)
 
-// 模拟数据
-const userProfile: UserProfile = {
-  name: "陈小明",
-  username: "ChenGamer2024",
-  avatar: "/placeholder.svg?height=80&width=80",
-  level: 42,
-  totalGamesPlayed: 156,
-  totalHoursPlayed: 234,
-  joinDate: "2023-03-15",
-}
+// 用户资料数据 - 使用实际登录用户数据或默认数据
+const userProfile = computed<UserProfile>(() => {
+  if (currentUser.value) {
+    return {
+      name: currentUser.value.username,
+      username: currentUser.value.username,
+      avatar: currentUser.value.avatar || "/placeholder.svg?height=80&width=80",
+      level: currentUser.value.level || 1,
+      totalGamesPlayed: currentUser.value.totalGamesPlayed || 0,
+      totalHoursPlayed: currentUser.value.totalHoursPlayed || 0,
+      joinDate: currentUser.value.joinDate || new Date().toISOString().split('T')[0],
+    }
+  } else {
+    // 未登录时的默认数据
+    return {
+      name: "神秘玩家",
+      username: "Guest",
+      avatar: "/placeholder.svg?height=80&width=80",
+      level: 1,
+      totalGamesPlayed: 0,
+      totalHoursPlayed: 0,
+      joinDate: new Date().toISOString().split('T')[0],
+    }
+  }
+})
 
 const recentGames: RecentGame[] = [
   {

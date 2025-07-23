@@ -215,7 +215,7 @@ const taglines = [
 
 const aiPlayerNames = ['qwen', 'openai', 'kimi', 'deepseek']
 
-const fullText = `"The rain lashed against the windows, mirroring the storm in my gut." 在这个阴雨绵绵的夜晚，贝克街221B号再次迎来了一个扑朔迷离的案件。一位神秘的访客在暴风雨中消失，留下的只有血迹和未解的谜团。`
+const fullText = `"一位八旬的独居老人，在得知远方表亲去世后，伤心过度，醒来后却发现自己准备用于奔丧的二十万存款不翼而飞。他将两个儿子、女儿和儿媳召集回家，坚信是自家人所为。随着调查的深入，这个看似和睦的家庭背后，每个成员都隐藏着对金钱的迫切需求和不为人知的秘密。一笔消失的存款，即将揭开家庭成员间复杂、疏离又相互纠缠的关系真相。`
 
 // Computed properties
 const confirmedCount = computed(() => 
