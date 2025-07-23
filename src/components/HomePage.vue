@@ -248,6 +248,18 @@
         </div>
       </div>
     </div>
+
+    <!-- Logout Confirmation Modal -->
+    <SystemModal
+      :visible="showLogoutModal"
+      type="confirm"
+      title="确认退出"
+      message="你确定要退出登录吗？退出后需要重新登录才能继续使用。"
+      confirm-text="确认退出"
+      cancel-text="取消"
+      @confirm="handleLogoutConfirm"
+      @cancel="handleLogoutCancel"
+    />
   </div>
 </template>
 
@@ -256,6 +268,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import ScriptDossier from './ScriptDossier.vue'
+import SystemModal from './SystemModal.vue'
 import { useGameData } from '../composables/useGameData'
 import { useUserStore } from '@/composables/useUserStore'
 
@@ -306,6 +319,9 @@ const error = ref<string | null>(null)
 // 用户菜单状态
 const isUserMenuOpen = ref(false)
 const userDropdown = ref<HTMLElement | null>(null)
+
+// 退出登录模态框状态
+const showLogoutModal = ref(false)
 
 // 常量
 const categories = ['All', 'Mystery', 'Hardcore', 'Horror', 'Emotional', 'Joyful']
@@ -471,12 +487,21 @@ const toggleUserMenu = () => {
 }
 
 const handleLogout = () => {
-  if (confirm('确定要退出登录吗？')) {
-    logout()
-    isUserMenuOpen.value = false
-    // 可以选择跳转到登录页面或刷新当前页面
-    // router.push({ name: 'login' })
-  }
+  isUserMenuOpen.value = false // 关闭用户菜单
+  showLogoutModal.value = true // 显示退出确认模态框
+}
+
+// 处理退出登录确认
+const handleLogoutConfirm = () => {
+  logout() // 执行实际的退出登录逻辑
+  showLogoutModal.value = false // 关闭模态框
+  // 可以选择跳转到登录页面
+  router.push({ name: 'login' })
+}
+
+// 处理退出登录取消
+const handleLogoutCancel = () => {
+  showLogoutModal.value = false // 仅关闭模态框，保持当前页面
 }
 
 // 点击外部关闭菜单

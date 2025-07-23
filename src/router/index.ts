@@ -4,6 +4,7 @@ import GalgameInterface from '@/components/GalgameInterface.vue'
 import UserProfile from '@/components/UserProfile.vue'
 import GameWait from '@/components/GameWait.vue'
 import LoginPage from '@/components/Login.vue'
+import ModalDemo from '@/components/ModalDemo.vue'
 import { useUserStore } from '@/composables/useUserStore'
 
 const routes = [
@@ -46,6 +47,14 @@ const routes = [
     meta: {
       title: '个人中心 - 迷雾剧场',
       requiresAuth: true
+    }
+  },
+  {
+    path: '/modal-demo',
+    name: 'modal-demo',
+    component: ModalDemo,
+    meta: {
+      title: '弹窗演示 - 迷雾剧场'
     }
   },
   {
